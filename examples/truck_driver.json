@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "truck_driver",
-  "canvas": { "w": 256, "h": 256, "scale": 2.2, "foot": 50, "baseY": 224, "glow": { "color": "#ff8a2a", "rx": 30 } },
+  "canvas": { "w": 256, "h": 256, "scale": 2.2, "foot": 50, "baseY": 224 },
   "palette": { "skin": "#ffd2a6", "shirt": "#ff8a2a", "jeans": "#3f6fc0", "dark": "#2b2f45", "cap": "#e33b3b", "brown": "#6a3d1e", "cheek": "#ff9a9a", "white": "#f4f6fb" },
   "shapes": [
     { "t": "rect", "x0": -10, "y0": 24, "x1": -2, "y1": 46, "fill": "$jeans" },

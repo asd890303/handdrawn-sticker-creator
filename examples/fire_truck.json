@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "name": "fire_truck",
+  "canvas": { "w": 256, "h": 256, "scale": 1.45, "foot": 41, "baseY": 224 },
+  "palette": { "red": "#e83b3b", "cab": "#e83b3b", "glass": "#bfefff", "white": "#f4f6fb", "gray": "#a4a9c0", "dark": "#2b2f45", "lamp": "#ffe14a", "siren": "#5aa8ff", "ladder": "#d8dcea" },
+  "shapes": [
+    { "t": "rect", "x0": -70, "y0": -30, "x1": 18, "y1": 22, "fill": "$red" },
+    { "t": "rect", "x0": -66, "y0": -12, "x1": 14, "y1": -6, "fill": "$white", "w": 2.4 },
+    { "t": "line", "pts": [[-28, -30], [-28, -12]], "w": 1.6, "amp": 0.1 },
+    { "t": "line", "pts": [[-28, -6], [-28, 22]], "w": 1.6, "amp": 0.1 },
+    { "t": "ell", "cx": -48, "cy": 8, "rx": 9, "ry": 9, "fill": "$gray", "w": 2.4 },
+    { "t": "dot", "x": -48, "y": 8, "r": 2.6, "fill": "$dark", "sw": 0 },
+    { "t": "rect", "x0": -64, "y0": -42, "x1": 8, "y1": -32, "fill": "$ladder", "w": 2.2 },
+    { "t": "repeat", "n": 7, "dx": 10, "children": [
+      { "t": "line", "pts": [[-60, -42], [-60, -32]], "w": 1.6, "amp": 0 }
+    ] },
+    { "t": "poly", "fill": "$cab", "pts": [[20, -30], [46, -30], [60, -8], [68, -4], [68, 22], [20, 22]] },
+    { "t": "poly", "fill": "$glass", "w": 2.4, "pts": [[26, -24], [44, -24], [54, -8], [26, -8]] },
+    { "t": "ell", "cx": 33, "cy": -34, "rx": 6, "ry": 4, "fill": "$siren", "w": 2.2 },
+    { "t": "ell", "cx": 64, "cy": 4, "rx": 3, "ry": 4, "fill": "$lamp", "w": 2 },
+    { "t": "rect", "x0": -70, "y0": 20, "x1": 68, "y1": 26, "fill": "$dark", "w": 2.4 },
+    { "t": "repeat", "n": 2, "dx": 22, "children": [
+      { "t": "ell", "cx": -50, "cy": 30, "rx": 11, "ry": 11, "fill": "$dark" },
+      { "t": "ell", "cx": -50, "cy": 30, "rx": 4.5, "ry": 4.5, "fill": "$gray", "w": 2 }
+    ] },
+    { "t": "ell", "cx": 44, "cy": 30, "rx": 11, "ry": 11, "fill": "$dark" },
+    { "t": "ell", "cx": 44, "cy": 30, "rx": 4.5, "ry": 4.5, "fill": "$gray", "w": 2 }
+  ]
+}

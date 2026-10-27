@@ -1,11 +1,11 @@
 import { renderSvg, SpecError } from "../src/index.js";
 import { svgToPngBlob } from "../src/export.js";
-import { LOCALES, detectLocale, locale, setLocale, t } from "./i18n/index.js";
+import { LOCALES, detectLocale, locale, setLocale, specFile, t } from "./i18n/index.js";
 import { LOGO } from "./logo.js";
 
 // 以模組位置解析路徑, 網站放在任何子路徑 (例如 github.io/<repo>/) 都能找到範例與 AI 規格
 const EXAMPLES_DIR = new URL("../examples/", import.meta.url);
-const AI_SPEC_URL = new URL("../docs/ai-prompt.md", import.meta.url);
+const aiSpecUrl = () => new URL(`../docs/${specFile()}`, import.meta.url);
 const $ = (s) => document.querySelector(s);
 const editor = $("#editor");
 const workspace = $(".workspace");
@@ -401,20 +401,37 @@ $("#copy").addEventListener("click", async () => {
 });
 
 // ---------- AI 規格視窗 ----------
+// 規格文件依語系各一份, 載入過的依檔名快取
+const aiSpecCache = new Map();
 let aiSpecText = null;
-$("#aiSpecDownload").href = AI_SPEC_URL.href;
-$("#aiSpecBtn").addEventListener("click", async () => {
+async function showAiSpec() {
+  const url = aiSpecUrl();
+  const file = specFile();
+  $("#aiSpecDownload").href = url.href;
+  $("#aiSpecDownload").download = file;
   $("#aiSpecNote").hidden = !t("aiSpec.note");
-  $("#aiSpec").showModal();
-  if (aiSpecText !== null) return;
-  try {
-    const res = await fetch(AI_SPEC_URL);
-    if (!res.ok) throw new Error(String(res.status));
-    aiSpecText = await res.text();
+  if (aiSpecCache.has(file)) {
+    aiSpecText = aiSpecCache.get(file);
     $("#aiSpecText").textContent = aiSpecText;
+    return;
+  }
+  aiSpecText = null;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(String(res.status));
+    const text = await res.text();
+    aiSpecCache.set(file, text);
+    // 載入期間若切換了語系, 這份已不是目前要顯示的
+    if (file !== specFile()) return;
+    aiSpecText = text;
+    $("#aiSpecText").textContent = text;
   } catch {
     $("#aiSpecText").textContent = t("error.aiSpecLoad");
   }
+}
+$("#aiSpecBtn").addEventListener("click", () => {
+  $("#aiSpec").showModal();
+  showAiSpec();
 });
 $("#aiSpecCopy").addEventListener("click", async () => {
   if (aiSpecText === null) return;
@@ -518,6 +535,7 @@ for (const [code, { label }] of Object.entries(LOCALES)) langSelect.add(new Opti
 langSelect.addEventListener("change", () => {
   setLocale(langSelect.value);
   store.set("studio.lang", locale());
+  if ($("#aiSpec").open) showAiSpec();
   renderList();
   render();
 });

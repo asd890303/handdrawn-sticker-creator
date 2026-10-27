@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "fridge",
-  "canvas": { "w": 256, "h": 256, "scale": 1.7, "foot": 58, "baseY": 224, "glow": { "color": "#7fd8ff", "rx": 40 } },
+  "canvas": { "w": 256, "h": 256, "scale": 1.7, "foot": 58, "baseY": 224 },
   "palette": { "body": "#eef1f8", "gray": "#a4a9c0", "dark": "#2b2f45", "screen": "#14182a", "digit": "#7cff9a", "note": "#ffe98a", "magnet": "#ff5a5a" },
   "shapes": [
     { "t": "rect", "x0": -22, "y0": 52, "x1": -14, "y1": 58, "fill": "$dark", "w": 2 },

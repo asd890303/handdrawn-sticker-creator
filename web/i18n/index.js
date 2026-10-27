@@ -3,13 +3,15 @@ import zhTW from "./zh-TW.js";
 import en from "./en.js";
 
 export const LOCALES = {
-  "zh-TW": { label: "繁體中文", dict: zhTW },
-  en: { label: "English", dict: en },
+  "zh-TW": { label: "繁體中文", dict: zhTW, spec: "ai-prompt.md" },
+  en: { label: "English", dict: en, spec: "ai-prompt.en.md" },
 };
 const FALLBACK = "zh-TW";
 let current = FALLBACK;
 
 export const locale = () => current;
+// 目前語系對應的 AI 規格文件檔名 (docs/ 底下)
+export const specFile = () => LOCALES[current].spec;
 
 // 先看使用者上次的選擇, 再看瀏覽器語言; 中文一律用繁中, 其他沒有對應的語言用英文
 export function detectLocale(saved) {
