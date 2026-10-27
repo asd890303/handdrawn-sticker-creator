@@ -1,0 +1,6 @@
+[
+  { "id": "apple", "file": "apple.json" },
+  { "id": "truck", "file": "truck.json" },
+  { "id": "fridge", "file": "fridge.json" },
+  { "id": "truck_driver", "file": "truck_driver.json" }
+]

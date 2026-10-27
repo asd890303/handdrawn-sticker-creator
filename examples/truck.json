@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "name": "truck",
+  "canvas": { "w": 256, "h": 256, "scale": 1.55, "foot": 41, "baseY": 224, "glow": { "color": "#5aa8ff", "rx": 72 } },
+  "palette": { "box": "#e8ecf5", "stripe": "#ff8a2a", "cab": "#5aa8ff", "glass": "#bfefff", "gray": "#a4a9c0", "dark": "#2b2f45", "lamp": "#ffe14a" },
+  "shapes": [
+    { "t": "rect", "x0": -70, "y0": -46, "x1": 18, "y1": 22, "fill": "$box" },
+    { "t": "rect", "x0": -64, "y0": -14, "x1": 12, "y1": -6, "fill": "$stripe", "w": 2.4 },
+    { "t": "poly", "fill": "$cab", "pts": [[20, -30], [46, -30], [60, -8], [68, -4], [68, 22], [20, 22]] },
+    { "t": "poly", "fill": "$glass", "w": 2.4, "pts": [[26, -24], [44, -24], [54, -8], [26, -8]] },
+    { "t": "line", "pts": [[24, -4], [24, 18]], "w": 2 },
+    { "t": "line", "pts": [[30, 2], [36, 2]], "w": 2.4 },
+    { "t": "ell", "cx": 64, "cy": 4, "rx": 3, "ry": 4, "fill": "$lamp", "w": 2 },
+    { "t": "rect", "x0": 58, "y0": 18, "x1": 72, "y1": 24, "fill": "$gray", "w": 2.4 },
+    { "t": "rect", "x0": -70, "y0": 20, "x1": 68, "y1": 26, "fill": "$dark", "w": 2.4 },
+    {
+      "t": "repeat", "n": 2, "dx": 22,
+      "children": [
+        { "t": "ell", "cx": -50, "cy": 30, "rx": 11, "ry": 11, "fill": "$dark" },
+        { "t": "ell", "cx": -50, "cy": 30, "rx": 4.5, "ry": 4.5, "fill": "$gray", "w": 2 }
+      ]
+    },
+    { "t": "ell", "cx": 44, "cy": 30, "rx": 11, "ry": 11, "fill": "$dark" },
+    { "t": "ell", "cx": 44, "cy": 30, "rx": 4.5, "ry": 4.5, "fill": "$gray", "w": 2 }
+  ]
+}

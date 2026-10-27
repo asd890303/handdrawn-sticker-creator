@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "name": "fridge",
+  "canvas": { "w": 256, "h": 256, "scale": 1.7, "foot": 58, "baseY": 224, "glow": { "color": "#7fd8ff", "rx": 40 } },
+  "palette": { "body": "#eef1f8", "gray": "#a4a9c0", "dark": "#2b2f45", "screen": "#14182a", "digit": "#7cff9a", "note": "#ffe98a", "magnet": "#ff5a5a" },
+  "shapes": [
+    { "t": "rect", "x0": -22, "y0": 52, "x1": -14, "y1": 58, "fill": "$dark", "w": 2 },
+    { "t": "rect", "x0": 14, "y0": 52, "x1": 22, "y1": 58, "fill": "$dark", "w": 2 },
+    { "t": "rect", "x0": -26, "y0": -64, "x1": 26, "y1": 52, "fill": "$body" },
+    { "t": "line", "pts": [[-26, -18], [26, -18]], "w": 3 },
+    { "t": "rect", "x0": 16, "y0": -52, "x1": 20, "y1": -30, "fill": "$gray", "w": 2.2 },
+    { "t": "rect", "x0": 16, "y0": -10, "x1": 20, "y1": 20, "fill": "$gray", "w": 2.2 },
+    { "t": "rect", "x0": -16, "y0": -50, "x1": 2, "y1": -38, "fill": "$screen", "w": 2 },
+    { "t": "line", "pts": [[-12, -44], [-2, -44]], "w": 2.2, "col": "$digit", "amp": 0.1 },
+    { "t": "rect", "x0": -18, "y0": -8, "x1": -4, "y1": 6, "fill": "$note", "w": 1.8 },
+    { "t": "line", "pts": [[-15, -3], [-7, -3]], "w": 1.4, "amp": 0.1 },
+    { "t": "line", "pts": [[-15, 1], [-9, 1]], "w": 1.4, "amp": 0.1 },
+    { "t": "dot", "x": -11, "y": -8, "r": 2.6, "fill": "$magnet" }
+  ]
+}
