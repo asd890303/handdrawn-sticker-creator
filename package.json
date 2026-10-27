@@ -1,0 +1,14 @@
+{
+  "name": "handdrawn-sticker-creator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI 寫 JSON，產生手繪貼紙風格的透明 PNG",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/serve.mjs dist",
+    "favicon": "node scripts/favicon.mjs",
+    "test": "node --test test/*.test.js"
+  }
+}

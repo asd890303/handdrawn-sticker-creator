@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Handdrawn Sticker Creator</title>
+  <meta name="description" content="跟 AI 說你要什麼圖，貼回 JSON，得到手繪貼紙風格的透明 PNG。" data-i18n-attr="content:meta.description">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <span id="logo" class="logo" aria-hidden="true"></span>
+      <h1>Handdrawn Sticker Creator</h1>
+      <span class="subtitle" lang="zh-TW">手繪貼紙產生器</span>
+    </div>
+    <div class="bar-actions">
+      <button id="aiSpecBtn" class="btn primary small" type="button" data-i18n="nav.aiSpec">AI 規格</button>
+      <button id="helpBtn" class="btn ghost small" type="button" data-i18n="nav.help">說明</button>
+      <label class="lang">
+        <span class="visually-hidden" data-i18n="lang.label">語言</span>
+        <select id="lang"></select>
+      </label>
+    </div>
+  </header>
+
+  <nav class="tabs" data-i18n-attr="aria-label:tabs.aria">
+    <button type="button" data-view="edit" aria-pressed="true" data-i18n="tabs.edit">編輯</button>
+    <button type="button" data-view="preview" aria-pressed="false" data-i18n="tabs.preview">預覽</button>
+  </nav>
+
+  <main class="workspace" data-view="edit">
+    <aside class="gallery" aria-labelledby="itemsTitle">
+      <div class="gallery-head">
+        <h2 id="itemsTitle" data-i18n="items.title">圖片列表</h2>
+        <span id="count" class="count">0/100</span>
+      </div>
+      <p id="itemsEmpty" class="empty" data-i18n="items.empty" hidden></p>
+      <ul id="items" class="cards"></ul>
+      <button id="addItem" class="btn ghost wide" type="button" data-i18n-attr="aria-label:items.add">
+        <span aria-hidden="true">+</span><span class="add-text" data-i18n="items.add">新增</span>
+      </button>
+    </aside>
+
+    <div id="gallerySplitter" class="splitter" role="separator" aria-orientation="vertical" tabindex="0" data-i18n-attr="aria-label:gallerySplitter.aria"></div>
+
+    <section class="pane editor-pane" aria-labelledby="editorTitle">
+      <div class="pane-head">
+        <h2 id="editorTitle">JSON</h2>
+        <div class="tools">
+          <button id="format" class="btn ghost small" type="button" data-i18n="editor.format">整理格式</button>
+          <button id="saveJson" class="btn ghost small" type="button" data-i18n="editor.saveJson">下載 JSON</button>
+        </div>
+      </div>
+      <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="status" data-i18n-attr="aria-label:editor.aria"></textarea>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </section>
+
+    <div id="splitter" class="splitter" role="separator" aria-orientation="vertical" tabindex="0" data-i18n-attr="aria-label:splitter.aria"></div>
+
+    <section class="pane preview-pane" data-i18n-attr="aria-label:preview.aria">
+      <div id="stage" class="stage bg-mat">
+        <div id="preview" class="preview"></div>
+      </div>
+      <div class="dock">
+        <fieldset class="seg">
+          <legend data-i18n="bg.legend">背景</legend>
+          <label><input type="radio" name="bg" value="mat" checked><span data-i18n="bg.mat">切割墊</span></label>
+          <label><input type="radio" name="bg" value="checker"><span data-i18n="bg.checker">透明格</span></label>
+          <label><input type="radio" name="bg" value="light"><span data-i18n="bg.light">白</span></label>
+          <label><input type="radio" name="bg" value="dark"><span data-i18n="bg.dark">深色</span></label>
+        </fieldset>
+        <fieldset class="seg">
+          <legend data-i18n="zoom.legend">縮放</legend>
+          <label><input type="radio" name="zoom" value="fit" checked><span data-i18n="zoom.fit">符合</span></label>
+          <label><input type="radio" name="zoom" value="1"><span>100%</span></label>
+          <label><input type="radio" name="zoom" value="2"><span>200%</span></label>
+        </fieldset>
+        <div class="seed" role="group" aria-labelledby="seedLabel">
+          <span id="seedLabel" class="legend" data-i18n="seed.label">線條變化</span>
+          <button id="seedDown" class="btn ghost icon" type="button" data-i18n-attr="aria-label:seed.down">−</button>
+          <input id="seed" type="number" value="0" step="1" inputmode="numeric" aria-labelledby="seedLabel">
+          <button id="seedUp" class="btn ghost icon" type="button" data-i18n-attr="aria-label:seed.up">+</button>
+          <button id="dice" class="btn ghost small" type="button" data-i18n="seed.random">隨機</button>
+        </div>
+        <fieldset class="seg" id="scaleSeg">
+          <legend data-i18n="scale.legend">輸出大小</legend>
+          <label><input type="radio" name="scale" value="1" checked><span data-scale="1">1×</span></label>
+          <label><input type="radio" name="scale" value="2"><span data-scale="2">2×</span></label>
+          <label><input type="radio" name="scale" value="4"><span data-scale="4">4×</span></label>
+        </fieldset>
+        <div class="actions">
+          <button id="copy" class="btn ghost" type="button" data-i18n="action.copySvg">複製 SVG</button>
+          <button id="export" class="btn primary" type="button" data-i18n="action.downloadPng">下載 PNG</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="aiSpec" class="wide" aria-labelledby="aiSpecTitle">
+    <div class="dialog-body">
+      <h2 id="aiSpecTitle" data-i18n="aiSpec.title">AI 規格</h2>
+      <p data-i18n="aiSpec.intro"></p>
+      <p id="aiSpecNote" class="note" data-i18n="aiSpec.note"></p>
+      <pre id="aiSpecText" tabindex="0"></pre>
+      <div class="dialog-actions">
+        <a id="aiSpecDownload" class="btn ghost" download="ai-prompt.md" data-i18n="aiSpec.download">下載 ai-prompt.md</a>
+        <form method="dialog"><button class="btn ghost" data-i18n="dialog.close">關閉</button></form>
+        <button id="aiSpecCopy" class="btn primary" type="button" data-i18n="aiSpec.copy">複製全部</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="help" aria-labelledby="helpTitle">
+    <form method="dialog" class="dialog-body">
+      <h2 id="helpTitle" data-i18n="help.title">怎麼用</h2>
+      <ol>
+        <li data-i18n="help.step1"></li>
+        <li data-i18n="help.step2"></li>
+        <li data-i18n="help.step3"></li>
+      </ol>
+      <h3 data-i18n="help.shapes">可以用的圖形</h3>
+      <table>
+        <tbody>
+          <tr><th scope="row"><code>rect</code></th><td data-i18n-html="help.rect"></td></tr>
+          <tr><th scope="row"><code>poly</code></th><td data-i18n-html="help.poly"></td></tr>
+          <tr><th scope="row"><code>ell</code></th><td data-i18n-html="help.ell"></td></tr>
+          <tr><th scope="row"><code>line</code></th><td data-i18n-html="help.line"></td></tr>
+          <tr><th scope="row"><code>tube</code></th><td data-i18n-html="help.tube"></td></tr>
+          <tr><th scope="row"><code>dot</code></th><td data-i18n-html="help.dot"></td></tr>
+          <tr><th scope="row"><code>group</code></th><td data-i18n-html="help.group"></td></tr>
+          <tr><th scope="row"><code>repeat</code></th><td data-i18n-html="help.repeat"></td></tr>
+        </tbody>
+      </table>
+      <p class="feedback">
+        <span data-i18n="help.feedback">建議與問題回報</span>
+        <a href="https://github.com/asd890303/handdrawn-sticker-creator/issues/new" target="_blank" rel="noopener">GitHub Issues</a>
+      </p>
+      <h3 data-i18n="storage.title">資料儲存</h3>
+      <p data-i18n="storage.text"></p>
+      <div class="dialog-actions">
+        <button class="btn ghost js-clear-storage" type="button" data-i18n="storage.clear">清除紀錄</button>
+        <button class="btn primary" value="close" data-i18n="help.ok">知道了</button>
+      </div>
+    </form>
+  </dialog>
+
+  <section id="notice" class="notice" data-i18n-attr="aria-label:storage.title" hidden>
+    <p data-i18n="storage.text"></p>
+    <div class="notice-actions">
+      <button class="btn ghost small js-clear-storage" type="button" data-i18n="storage.clear">清除紀錄</button>
+      <button id="noticeOk" class="btn primary small" type="button" data-i18n="storage.ok">知道了</button>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
