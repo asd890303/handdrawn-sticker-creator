@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "name": "bicycle",
+  "canvas": { "w": 256, "h": 256, "scale": 1.65, "foot": 46, "baseY": 224 },
+  "palette": { "frame": "#2fbf8f", "dark": "#2b2f45", "gray": "#a4a9c0", "seat": "#6a3d1e" },
+  "shapes": [
+    { "t": "ell", "cx": -34, "cy": 20, "rx": 26, "ry": 26, "fill": "none", "w": 4.2 },
+    { "t": "ell", "cx": 34, "cy": 20, "rx": 26, "ry": 26, "fill": "none", "w": 4.2 },
+    { "t": "group", "transform": { "tx": -34, "ty": 20 }, "children": [
+      { "t": "repeat", "n": 8, "rot": 45, "children": [
+        { "t": "line", "pts": [[0, 0], [0, -23]], "w": 1, "col": "$gray", "amp": 0 }
+      ] },
+      { "t": "dot", "x": 0, "y": 0, "r": 3.4, "fill": "$gray" }
+    ] },
+    { "t": "group", "transform": { "tx": 34, "ty": 20 }, "children": [
+      { "t": "repeat", "n": 8, "rot": 45, "children": [
+        { "t": "line", "pts": [[0, 0], [0, -23]], "w": 1, "col": "$gray", "amp": 0 }
+      ] },
+      { "t": "dot", "x": 0, "y": 0, "r": 3.4, "fill": "$gray" }
+    ] },
+    { "t": "tube", "pts": [[-34, 20], [-2, 22], [22, -14], [-10, -14], [-34, 20]], "w": 3.6, "col": "$frame" },
+    { "t": "tube", "pts": [[-10, -14], [-2, 22]], "w": 3.6, "col": "$frame" },
+    { "t": "tube", "pts": [[22, -14], [34, 20]], "w": 3.2, "col": "$gray" },
+    { "t": "tube", "pts": [[22, -14], [20, -24], [30, -26]], "w": 3, "col": "$gray" },
+    { "t": "line", "pts": [[-10, -14], [-11, -19]], "w": 2.6 },
+    { "t": "ell", "cx": -12, "cy": -21, "rx": 9, "ry": 3, "fill": "$seat", "w": 2.2 },
+    { "t": "ell", "cx": -2, "cy": 22, "rx": 7, "ry": 7, "fill": "$gray", "w": 2.2 },
+    { "t": "line", "pts": [[-2, 22], [6, 32]], "w": 2.6 },
+    { "t": "rect", "x0": 3, "y0": 31, "x1": 11, "y1": 34, "fill": "$dark", "w": 1.8 },
+    { "t": "dot", "x": 30, "y": -26, "r": 2.4, "fill": "$dark" }
+  ]
+}

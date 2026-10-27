@@ -16,6 +16,9 @@ test("範例清單裡的每個規格都能通過驗證並產出 SVG", async () =
     assert.match(svg, /^<svg [^>]*width="256" height="256"/);
     assert.equal(`${width}x${height}`, "256x256");
     assert.ok(svg.includes('id="rim"') && svg.includes('id="shade"'));
+    // 輸出要能乾淨去背: 預設沒有陰影疊層, 也沒有腳底光暈
+    assert.ok(!svg.includes('mask="url(#shade)"'), "預設不該畫下半部陰影");
+    assert.ok(!/<ellipse[^>]*opacity/.test(svg) && !svg.includes('id="glow"'), "不該畫腳底光暈");
   }
 });
 
@@ -62,8 +65,8 @@ test("輸出的 SVG 不含 script 或事件屬性", async () => {
   }
 });
 
-test("給 AI 的規格文件: 範例 JSON 都合法, 每種圖形都有說明", async () => {
-  const doc = await readFile(new URL("../docs/ai-prompt.md", import.meta.url), "utf8");
+for (const file of ["ai-prompt.md", "ai-prompt.en.md"]) test(`給 AI 的規格文件 ${file}: 範例 JSON 都合法, 每種圖形都有說明`, async () => {
+  const doc = (await readFile(new URL(`../docs/${file}`, import.meta.url), "utf8")).replace(/\r\n/g, "\n");
   const blocks = [...doc.matchAll(/```json\n([\s\S]*?)```/g)].map((m) => m[1]);
   const full = blocks.filter((b) => b.trimStart().startsWith('{\n  "version"'));
   assert.ok(full.length >= 2, "至少要有兩份完整範例");
@@ -95,4 +98,10 @@ test("介面語系: 各語系 key 一致, 介面用到的 key 都有翻譯", asy
   const list = JSON.parse(await readFile(new URL("../examples/index.json", import.meta.url), "utf8"));
   for (const ex of list) used.add(`example.${ex.id}`);
   for (const key of used) assert.ok(key in zh, `zh-TW 缺少 ${key}`);
+});
+
+test("skills/handdrawn-sticker-creator/SKILL.md 與 docs/ai-prompt.md 同步 (不同步請執行 npm run skill)", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { buildSkill, SKILL_PATH } = await import("../scripts/sync-skill.mjs");
+  assert.equal(await readFile(SKILL_PATH, "utf8"), await buildSkill());
 });

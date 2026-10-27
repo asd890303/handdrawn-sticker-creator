@@ -39,6 +39,7 @@ export function validateSpec(spec) {
     if (c.scale !== undefined && !inRange(c.scale, 0.1, 40)) err("canvas.scale", "需為 0.1~40 的數字");
     for (const k of ["foot", "baseY", "cx"]) if (c[k] !== undefined && !isNum(c[k])) err(`canvas.${k}`, "需為數字");
     for (const k of ["rim", "shade"]) if (c[k] !== undefined && typeof c[k] !== "boolean") err(`canvas.${k}`, "需為布林");
+    // glow 已不再繪製 (輸出要能乾淨去背), 這裡只檢查格式, 讓舊的 JSON 不會報錯
     if (c.glow !== undefined) {
       const g = c.glow;
       if (!g || typeof g.color !== "string" || !/^#[0-9a-fA-F]{3,8}$/.test(g.color)) err("canvas.glow.color", "需為 #rrggbb");

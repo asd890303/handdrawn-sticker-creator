@@ -2,5 +2,11 @@
   { "id": "apple", "file": "apple.json" },
   { "id": "truck", "file": "truck.json" },
   { "id": "fridge", "file": "fridge.json" },
-  { "id": "truck_driver", "file": "truck_driver.json" }
+  { "id": "truck_driver", "file": "truck_driver.json" },
+  { "id": "kitten", "file": "kitten.json" },
+  { "id": "rocket", "file": "rocket.json" },
+  { "id": "fire_truck", "file": "fire_truck.json" },
+  { "id": "monitor", "file": "monitor.json" },
+  { "id": "bicycle", "file": "bicycle.json" },
+  { "id": "phone", "file": "phone.json" }
 ]
