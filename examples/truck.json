@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "truck",
-  "canvas": { "w": 256, "h": 256, "scale": 1.55, "foot": 41, "baseY": 224, "glow": { "color": "#5aa8ff", "rx": 72 } },
+  "canvas": { "w": 256, "h": 256, "scale": 1.55, "foot": 41, "baseY": 224 },
   "palette": { "box": "#e8ecf5", "stripe": "#ff8a2a", "cab": "#5aa8ff", "glass": "#bfefff", "gray": "#a4a9c0", "dark": "#2b2f45", "lamp": "#ffe14a" },
   "shapes": [
     { "t": "rect", "x0": -70, "y0": -46, "x1": 18, "y1": 22, "fill": "$box" },

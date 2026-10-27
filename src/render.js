@@ -1,5 +1,5 @@
 import { Pen } from "./engine/pen.js";
-import { defs, glowEllipse, wrap } from "./engine/fx.js";
+import { defs, wrap } from "./engine/fx.js";
 import { ADVANCE, GLYPHS } from "./engine/glyphs.js";
 import { hashSeed, mulberry32 } from "./engine/rng.js";
 import { validateSpec } from "./spec.js";
@@ -80,9 +80,8 @@ export function renderSvg(spec, { seed = 0, id = "" } = {}) {
   const foot = c.foot ?? 0;
   const ox = c.w / 2 - (c.cx ?? 0) * sc;
   const oy = (c.baseY ?? c.h - 32) - foot * sc;
-  const glow = c.glow ? glowEllipse({ ...c.glow, cy: c.glow.cy ?? foot + 4 }, id) : "";
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${c.w}" height="${c.h}" viewBox="0 0 ${c.w} ${c.h}">${defs(id)}` +
-    `<g transform="translate(${ox},${oy}) scale(${sc})">${glow}${wrap(fig, { id, rim: c.rim ?? true, shade: c.shade ?? true })}</g></svg>`;
+    `<g transform="translate(${ox},${oy}) scale(${sc})">${wrap(fig, { id, rim: c.rim ?? true, shade: c.shade ?? false })}</g></svg>`;
   return { svg, width: c.w, height: c.h };
 }

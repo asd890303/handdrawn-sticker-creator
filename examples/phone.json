@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "phone",
+  "canvas": { "w": 256, "h": 256, "scale": 2.2, "foot": 44, "baseY": 224 },
+  "palette": { "dark": "#2b2f45", "sky": "#7fd8ff", "sun": "#ffe14a", "hill": "#7cd65a", "gray": "#8a8fa8" },
+  "shapes": [
+    { "t": "rect", "x0": -22, "y0": -44, "x1": 22, "y1": 44, "fill": "$dark" },
+    { "t": "rect", "x0": -18, "y0": -38, "x1": 18, "y1": 36, "fill": "$sky", "w": 2 },
+    { "t": "ell", "cx": 9, "cy": -2, "rx": 5, "ry": 5, "fill": "$sun", "w": 1.8 },
+    { "t": "poly", "box": false, "fill": "$hill", "w": 2, "pts": [[-18, 14], [-10, 8], [0, 10], [10, 15], [18, 12], [18, 36], [-18, 36]] },
+    { "t": "repeat", "n": 3, "dx": 12, "children": [
+      { "t": "rect", "x0": -14, "y0": -33, "x1": -6, "y1": -25, "fill": ["#ff5a5a", "#ffd34a", "#5a7cff"], "w": 1.6 }
+    ] },
+    { "t": "repeat", "n": 3, "dx": 12, "children": [
+      { "t": "rect", "x0": -14, "y0": -21, "x1": -6, "y1": -13, "fill": ["#b67cff", "#ff9ad5", "#ffffff"], "w": 1.6 }
+    ] },
+    { "t": "poly", "fill": "#ffffff33", "w": 0, "pts": [[-18, -38], [-2, -38], [-18, -8]] },
+    { "t": "dot", "x": 0, "y": -41, "r": 1.4, "fill": "$gray", "sw": 0 },
+    { "t": "line", "pts": [[-6, 40], [6, 40]], "w": 1.6, "col": "$gray", "amp": 0 }
+  ]
+}

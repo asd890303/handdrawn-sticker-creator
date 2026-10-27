@@ -9,6 +9,8 @@
     "build": "node scripts/build.mjs",
     "preview": "node scripts/serve.mjs dist",
     "favicon": "node scripts/favicon.mjs",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "skill": "node scripts/sync-skill.mjs",
+    "examples-image": "node scripts/examples-image.mjs"
   }
 }

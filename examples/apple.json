@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "apple",
-  "canvas": { "w": 256, "h": 256, "scale": 3.0, "foot": 29, "baseY": 224, "glow": { "color": "#ff5a5a", "rx": 28 } },
+  "canvas": { "w": 256, "h": 256, "scale": 3.0, "foot": 29, "baseY": 224 },
   "palette": { "red": "#ff5a5a", "brown": "#6a3d1e", "green": "#7cd65a", "greenD": "#3f8f2a", "shine": "#ffc4c4" },
   "shapes": [
     { "t": "line", "pts": [[0, -20], [2, -30], [5, -36]], "w": 3.4, "col": "$brown" },
