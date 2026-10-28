@@ -1,23 +1,13 @@
 import { renderSvg, SpecError } from "../src/index.js";
 import { svgToPngBlob } from "../src/export.js";
-import { LOCALES, detectLocale, locale, setLocale, specFile, t } from "./i18n/index.js";
+import { specFile, t } from "./i18n/index.js";
+import { $, bindAiSpec, bindLang, bindSeed, download, fileBase, showStatus, store, toast } from "./common.js";
 import { LOGO } from "./logo.js";
 
 // 以模組位置解析路徑, 網站放在任何子路徑 (例如 github.io/<repo>/) 都能找到範例與 AI 規格
 const EXAMPLES_DIR = new URL("../examples/", import.meta.url);
-const aiSpecUrl = () => new URL(`../docs/${specFile()}`, import.meta.url);
-const $ = (s) => document.querySelector(s);
 const editor = $("#editor");
 const workspace = $(".workspace");
-
-// 本站存在 localStorage 的全部項目; 「資料儲存」聲明的內容要和這份清單一致
-const STORE_KEYS = ["studio.items", "studio.current", "studio.lang", "studio.bg", "studio.split", "studio.galleryW", "studio.notice"];
-const store = {
-  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
-  // 回傳是否寫入成功; 私密視窗、被封鎖或空間不足時為 false
-  set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch { return false; } },
-  clear: () => { for (const k of STORE_KEYS) { try { localStorage.removeItem(k); } catch { /* 同上 */ } } },
-};
 
 const MAX_ITEMS = 100;
 const TITLE_MAX = 40;
@@ -51,42 +41,12 @@ function pretty(v, ind = "") {
   return Array.isArray(v) ? `[\n${items.join(",\n")}\n${ind}]` : `{\n${items.join(",\n")}\n${ind}}`;
 }
 
-// ---------- 提示 ----------
-let toastTimer;
-function toast(msg) {
-  const el = $("#toast");
-  el.textContent = msg;
-  el.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
-}
-
 // ---------- 渲染 ----------
 const countShapes = (list) => list.reduce((n, s) => n + 1 + (Array.isArray(s.children) ? countShapes(s.children) : 0), 0);
 const currentItem = () => state.items.find((x) => x.id === state.currentId);
-// 下載檔名用自訂標題; 只換掉作業系統不允許的字元, 中文照用
-const fileBase = (title) => (title.trim() || "image").replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "_").slice(0, 80);
 
-function showErrors(errors) {
-  const el = $("#status");
-  el.className = "status error";
-  el.replaceChildren();
-  const head = document.createElement("strong");
-  head.textContent = t("status.errors", { n: errors.length });
-  const ul = document.createElement("ul");
-  for (const e of errors) {
-    const li = document.createElement("li");
-    li.textContent = e;
-    ul.append(li);
-  }
-  el.append(head, ul);
-}
-
-function showStatus(text) {
-  const el = $("#status");
-  el.className = "status";
-  el.textContent = text;
-}
+const showErrors = (errors) => showStatus($("#status"), "", errors);
+const setStatus = (text) => showStatus($("#status"), text);
 
 function updateScaleLabels() {
   if (!state.current) return;
@@ -101,7 +61,7 @@ function render() {
   if (!item) {
     state.current = null;
     $("#preview").replaceChildren();
-    showStatus(t("items.empty"));
+    setStatus(t("items.empty"));
     return;
   }
   let spec;
@@ -120,7 +80,7 @@ function render() {
   }
   $("#preview").innerHTML = state.current.svg;
   updateScaleLabels();
-  showStatus(t("status.ok", { w: spec.canvas.w, h: spec.canvas.h, n: countShapes(spec.shapes) }));
+  setStatus(t("status.ok", { w: spec.canvas.w, h: spec.canvas.h, n: countShapes(spec.shapes) }));
   updateThumb(item);
 }
 
@@ -300,7 +260,7 @@ async function loadItems() {
     try {
       const v = JSON.parse(raw);
       if (Array.isArray(v)) {
-        return v.filter((x) => x && typeof x.id === "string" && typeof x.title === "string" && typeof x.json === "string").slice(0, MAX_ITEMS);
+        return v.filter((x) => x && typeof x.id === "string" && /^[\w-]+$/.test(x.id) && typeof x.title === "string" && typeof x.json === "string").slice(0, MAX_ITEMS);
       }
     } catch { /* 存檔損毀時當作空列表 */ }
     return [];
@@ -326,14 +286,6 @@ $("#format").addEventListener("click", () => {
   }
 });
 
-function download(blob, filename) {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-
 $("#saveJson").addEventListener("click", () => {
   const item = currentItem();
   if (!item) return;
@@ -350,15 +302,7 @@ for (const input of document.querySelectorAll('input[name="scale"]')) {
   input.addEventListener("change", () => { state.scale = Number(input.value); });
 }
 
-function setSeed(n) {
-  state.seed = Number.isFinite(n) ? Math.trunc(n) : 0;
-  $("#seed").value = state.seed;
-  render();
-}
-$("#seed").addEventListener("input", (e) => setSeed(Number(e.target.value)));
-$("#seedDown").addEventListener("click", () => setSeed(state.seed - 1));
-$("#seedUp").addEventListener("click", () => setSeed(state.seed + 1));
-$("#dice").addEventListener("click", () => setSeed(Math.floor(Math.random() * 10000)));
+bindSeed({ input: $("#seed"), down: $("#seedDown"), up: $("#seedUp"), dice: $("#dice") }, () => state.seed, (v) => { state.seed = v; render(); });
 
 async function exportPng() {
   const item = currentItem();
@@ -387,47 +331,10 @@ $("#copy").addEventListener("click", async () => {
 });
 
 // ---------- AI 規格視窗 ----------
-// 規格文件依語系各一份, 載入過的依檔名快取
-const aiSpecCache = new Map();
-let aiSpecText = null;
-async function showAiSpec() {
-  const url = aiSpecUrl();
-  const file = specFile();
-  $("#aiSpecDownload").href = url.href;
-  $("#aiSpecDownload").download = file;
-  $("#aiSpecNote").hidden = !t("aiSpec.note");
-  if (aiSpecCache.has(file)) {
-    aiSpecText = aiSpecCache.get(file);
-    $("#aiSpecText").textContent = aiSpecText;
-    return;
-  }
-  aiSpecText = null;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(String(res.status));
-    const text = await res.text();
-    aiSpecCache.set(file, text);
-    // 載入期間若切換了語系, 這份已不是目前要顯示的
-    if (file !== specFile()) return;
-    aiSpecText = text;
-    $("#aiSpecText").textContent = text;
-  } catch {
-    $("#aiSpecText").textContent = t("error.aiSpecLoad");
-  }
-}
-$("#aiSpecBtn").addEventListener("click", () => {
-  $("#aiSpec").showModal();
-  showAiSpec();
-});
-$("#aiSpecCopy").addEventListener("click", async () => {
-  if (aiSpecText === null) return;
-  try {
-    await navigator.clipboard.writeText(aiSpecText);
-    toast(t("toast.aiSpecCopied"));
-  } catch {
-    toast(t("toast.clipboardDenied"));
-  }
-});
+const aiSpec = bindAiSpec(
+  { open: $("#aiSpecBtn"), dialog: $("#aiSpec"), text: $("#aiSpecText"), copy: $("#aiSpecCopy"), link: $("#aiSpecDownload"), note: $("#aiSpecNote") },
+  specFile,
+);
 
 // ---------- 版面: 拖曳分隔線, 窄螢幕分頁 ----------
 const splitter = $("#splitter");
@@ -516,19 +423,7 @@ for (const btn of document.querySelectorAll(".js-clear-storage")) {
 }
 
 // ---------- 語系 ----------
-const langSelect = $("#lang");
-for (const [code, { label }] of Object.entries(LOCALES)) langSelect.add(new Option(label, code));
-langSelect.addEventListener("change", () => {
-  setLocale(langSelect.value);
-  store.set("studio.lang", locale());
-  if ($("#aiSpec").open) showAiSpec();
-  renderList();
-  render();
-});
-
-// ---------- 啟動 ----------
-setLocale(detectLocale(store.get("studio.lang")));
-langSelect.value = locale();
+bindLang($("#lang"), () => { aiSpec.refresh(); renderList(); render(); });
 $("#logo").innerHTML = renderSvg(LOGO, { id: "logo-" }).svg;
 
 const savedBg = store.get("studio.bg");
