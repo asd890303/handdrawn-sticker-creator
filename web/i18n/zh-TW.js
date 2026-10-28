@@ -94,4 +94,7 @@ export default {
   "status.human": "18 格都畫好了 (正面、背面、側面各走路 6 格)，圖集 {w}×{h} 像素",
   "toast.pasteCleaned": "已移除 JSON 前後的說明文字與程式碼框 (共 {n} 字元)",
   "status.warnings": "。提醒：{list}",
+  "error.jsonHint": "常見原因：引號要用半形 \"，欄位名稱要加引號，不能有註解，最後一項後面不能多逗號。貼上 AI 的回覆時，工具會自動修正這些問題。",
+  "status.fixed": "。已自動修正：{list} (編輯區沒有改動，按「整理格式」會寫回)",
+  "toast.pasteFixed": "已自動修正 JSON：{list}",
 };

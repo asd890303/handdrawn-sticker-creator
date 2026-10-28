@@ -37,7 +37,7 @@ Reply with the following (tone may vary), then stop and wait. Use the user's lan
 
 This reply must contain **one JSON object only** (except the one-line note in STEP 2). No other text, no ``` code fence, so the user can copy it whole.
 
-Reply length is the user's token cost. Write the JSON as compact single-line text (no indentation, no line breaks), follow the "Short-form rules" below, and keep it within 3000 characters.
+Reply length is the user's token cost. Write the JSON as compact single-line text (no indentation, no line breaks), follow the "Short-form rules" below, and keep it within 3000 characters. The JSON must be standard: keys and strings use straight double quotes `"`, never curly quotes “ ” or single quotes `'`, and keys are quoted.
 
 ### STEP 4: The user reports an error or wants changes
 
@@ -113,7 +113,7 @@ Limits match stickers: at most 2000 shapes per group, 200 points per `pts`, 64 c
 ## Output rules
 
 1. The final reply is exactly one JSON object (see STEP 3), compact on a single line, within 3000 characters.
-2. No comments, no trailing commas.
+2. No comments, no trailing commas. Quotes are always straight `"`.
 3. Use only the fields listed in this document. Unknown fields are reported as errors.
 4. Colors are `#hex` or `$name`, never color words. Every `$name` must exist in `palette`.
 5. All four parts are required, each with `front` and `side`; `head` also needs `back`. Do not rewrite a `back` for `leg`, `arm` or `torso` that equals `front`.
@@ -122,6 +122,7 @@ Limits match stickers: at most 2000 shapes per group, 200 points per `pts`, 64 c
 ## Self-check before output
 
 - [ ] Exactly one JSON object, no explanation, no code fence, compact on a single line
+- [ ] Quotes are straight `"`, keys are quoted, no comments, no trailing commas
 - [ ] `version`, `name` and `parts` are present
 - [ ] No `back` repeated for `leg`, `arm` or `torso` when it equals `front`; `head` has all three views
 - [ ] Every `$name` is in `palette`

@@ -94,4 +94,7 @@ export default {
   "status.human": "All 18 frames drawn (6 walk frames each from front, back and side), sheet {w}×{h} px",
   "toast.pasteCleaned": "Removed the text and code fence around the JSON ({n} characters)",
   "status.warnings": ". Notes: {list}",
+  "error.jsonHint": "Common causes: quotes must be straight \" quotes, keys need quotes, no comments, no comma after the last item. Pasting an AI reply fixes these automatically.",
+  "status.fixed": ". Fixed automatically: {list} (the editor is unchanged; \"Tidy\" writes the fix back)",
+  "toast.pasteFixed": "JSON fixed automatically: {list}",
 };

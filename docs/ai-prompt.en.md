@@ -38,14 +38,22 @@ When you picked the subject at random, first say what you chose in one line (e.g
 
 Output the JSON following the spec below. Apart from the one-line note from STEP 2 (random pick only), this reply must contain **exactly one JSON object**: no other explanation, and no ``` code fence, so the user can copy it in one piece.
 
+Reply length is the user's token cost, so:
+
+- Write the JSON as compact single-line text: no indentation, no line breaks.
+- Use the shorthand for shapes (see below), write integer coordinates, and at most one decimal when needed.
+- Keep the whole reply within 2500 characters.
+
+The JSON must be standard: keys and strings use straight double quotes `"`, never curly quotes “ ” or single quotes `'`, and keys are quoted.
+
 ### STEP 4: The user reports an error or wants changes
 
 The user may paste back an error message from the tool, in the form "path: reason", e.g. `shapes[2].fill: palette has no $blue`. Find the field by its path and fix it. The same goes when the user wants other colors or a different design. Every time, output the complete JSON again (JSON only).
 
 ## Output rules
 
-1. The final reply is exactly one JSON object (see STEP 3).
-2. No comments and no trailing commas in the JSON.
+1. The final reply is exactly one JSON object (see STEP 3), compact on a single line, within 2500 characters.
+2. No comments and no trailing commas in the JSON. Quotes are always straight `"`.
 3. Use only the fields and shape types listed in this document. Do not invent fields.
 4. Write numbers as numbers, e.g. `12.5`, never as strings or expressions.
 5. After the user has answered, make reasonable decisions for anything unclear instead of asking again.
@@ -207,6 +215,21 @@ For left-right symmetric objects (two hands, two eyes), draw the left side first
 - **The array form works only inside `repeat`.** An array anywhere else is an error. `pts` is not covered by this rule.
 - For evenly spaced parts such as windows, wheels, keys and fence posts, `repeat` beats writing each one out.
 
+## Shorthand (saves tokens)
+
+The six shapes below may be written as arrays: the first element is the type, the rest are field values in order, and the ones marked `?` may be left out. To skip a field in the middle (you want `box` but not `w`), write `null` in its place.
+
+| Shorthand | Same as |
+|---|---|
+| `["rect", fill, x0, y0, x1, y1, w?]` | `rect` |
+| `["poly", fill, pts, w?, box?]` | `poly` |
+| `["ell", fill, cx, cy, rx, ry, w?]` | `ell` |
+| `["line", pts, w?, col?, amp?]` | `line` |
+| `["tube", pts, w, col]` | `tube` |
+| `["dot", fill, x, y, r, sw?]` | `dot` |
+
+For example `["poly","$red",[[0,-18],[10,-24],[22,-18]],null,false]` is `{"t":"poly","fill":"$red","pts":[[0,-18],[10,-24],[22,-18]],"box":false}`, and `["dot","$shine",-14,-10,4,0]` is a highlight dot with `sw` 0. `group` and `repeat` keep the object form. Both forms may be mixed, including inside `children`.
+
 ## Composition rules
 
 1. **Draw from back to front**: later entries in `shapes` cover earlier ones. Order: rear parts → body → front parts → details → highlights.
@@ -235,18 +258,15 @@ An apple. Note: the stem is drawn first and the fruit covers it; the fruit uses 
 {
   "version": 1,
   "name": "apple",
-  "canvas": { "w": 256, "h": 256, "scale": 3.0, "foot": 29, "baseY": 224 },
+  "canvas": { "w": 256, "h": 256, "scale": 3, "foot": 29, "baseY": 224 },
   "palette": { "red": "#ff5a5a", "brown": "#6a3d1e", "green": "#7cd65a", "greenD": "#3f8f2a", "shine": "#ffc4c4" },
   "shapes": [
-    { "t": "line", "pts": [[0, -20], [2, -30], [5, -36]], "w": 3.4, "col": "$brown" },
-    {
-      "t": "poly", "box": false, "fill": "$red",
-      "pts": [[0, -18], [10, -24], [22, -18], [27, -4], [24, 14], [14, 27], [4, 29], [0, 27], [-4, 29], [-14, 27], [-24, 14], [-27, -4], [-22, -18], [-10, -24]]
-    },
-    { "t": "poly", "box": false, "fill": "$green", "w": 2.4, "pts": [[4, -30], [14, -38], [24, -34], [16, -26]] },
-    { "t": "line", "pts": [[6, -30], [20, -34]], "w": 1.6, "col": "$greenD" },
-    { "t": "dot", "x": -14, "y": -10, "r": 4, "fill": "$shine", "sw": 0 },
-    { "t": "dot", "x": -17, "y": -1, "r": 2, "fill": "$shine", "sw": 0 }
+    ["line",[[0,-20],[2,-30],[5,-36]],3.4,"$brown"],
+    ["poly","$red",[[0,-18],[10,-24],[22,-18],[27,-4],[24,14],[14,27],[4,29],[0,27],[-4,29],[-14,27],[-24,14],[-27,-4],[-22,-18],[-10,-24]],null,false],
+    ["poly","$green",[[4,-30],[14,-38],[24,-34],[16,-26]],2.4,false],
+    ["line",[[6,-30],[20,-34]],1.6,"$greenD"],
+    ["dot","$shine",-14,-10,4,0],
+    ["dot","$shine",-17,-1,2,0]
   ]
 }
 ```
@@ -260,18 +280,15 @@ A truck. Note: `repeat` draws the two rear wheels; the windshield is a straight-
   "canvas": { "w": 256, "h": 256, "scale": 1.55, "foot": 41, "baseY": 224 },
   "palette": { "box": "#e8ecf5", "stripe": "#ff8a2a", "cab": "#5aa8ff", "glass": "#bfefff", "gray": "#a4a9c0", "dark": "#2b2f45", "lamp": "#ffe14a" },
   "shapes": [
-    { "t": "rect", "x0": -70, "y0": -46, "x1": 18, "y1": 22, "fill": "$box" },
-    { "t": "rect", "x0": -64, "y0": -14, "x1": 12, "y1": -6, "fill": "$stripe", "w": 2.4 },
-    { "t": "poly", "fill": "$cab", "pts": [[20, -30], [46, -30], [60, -8], [68, -4], [68, 22], [20, 22]] },
-    { "t": "poly", "fill": "$glass", "w": 2.4, "pts": [[26, -24], [44, -24], [54, -8], [26, -8]] },
-    { "t": "ell", "cx": 64, "cy": 4, "rx": 3, "ry": 4, "fill": "$lamp", "w": 2 },
-    { "t": "rect", "x0": -70, "y0": 20, "x1": 68, "y1": 26, "fill": "$dark", "w": 2.4 },
-    { "t": "repeat", "n": 2, "dx": 22, "children": [
-      { "t": "ell", "cx": -50, "cy": 30, "rx": 11, "ry": 11, "fill": "$dark" },
-      { "t": "ell", "cx": -50, "cy": 30, "rx": 4.5, "ry": 4.5, "fill": "$gray", "w": 2 }
-    ] },
-    { "t": "ell", "cx": 44, "cy": 30, "rx": 11, "ry": 11, "fill": "$dark" },
-    { "t": "ell", "cx": 44, "cy": 30, "rx": 4.5, "ry": 4.5, "fill": "$gray", "w": 2 }
+    ["rect","$box",-70,-46,18,22],
+    ["rect","$stripe",-64,-14,12,-6,2.4],
+    ["poly","$cab",[[20,-30],[46,-30],[60,-8],[68,-4],[68,22],[20,22]]],
+    ["poly","$glass",[[26,-24],[44,-24],[54,-8],[26,-8]],2.4],
+    ["ell","$lamp",64,4,3,4,2],
+    ["rect","$dark",-70,20,68,26,2.4],
+    {"t":"repeat","n":2,"dx":22,"children":[["ell","$dark",-50,30,11,11],["ell","$gray",-50,30,4.5,4.5,2]]},
+    ["ell","$dark",44,30,11,11],
+    ["ell","$gray",44,30,4.5,4.5,2]
   ]
 }
 ```
@@ -280,7 +297,9 @@ A truck. Note: `repeat` draws the two rear wheels; the windshield is a straight-
 
 Check each item before output. If any fails, fix it first:
 
-- [ ] Exactly one JSON object, no explanation, no code fence
+- [ ] Exactly one JSON object, no explanation, no code fence, compact on a single line
+- [ ] Quotes are straight `"`, keys are quoted, no comments, no trailing commas
+- [ ] Shapes use the shorthand, coordinates are integers, the whole reply is within 2500 characters
 - [ ] Has `version`, `name`, `canvas`, `shapes`
 - [ ] Every `$name` exists in `palette`
 - [ ] `poly` has at least 3 points, `line` and `tube` at least 2
