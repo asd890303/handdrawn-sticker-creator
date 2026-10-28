@@ -1,0 +1,4 @@
+# 全部文字檔一律用 LF, Windows 與 macOS 之間切換時不會因換行造成差異
+* text=auto eol=lf
+*.png binary
+*.ico binary

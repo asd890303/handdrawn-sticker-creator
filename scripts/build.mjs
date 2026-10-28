@@ -13,7 +13,7 @@ for (const dir of ["web", "src", "examples"]) {
 }
 // 網頁的「AI 規格」視窗讀取這份文件
 await mkdir(path.join(DIST, "docs"));
-for (const f of ["ai-prompt.md", "ai-prompt.en.md"]) await cp(path.join(ROOT, "docs", f), path.join(DIST, "docs", f));
+for (const f of ["ai-prompt.md", "ai-prompt.en.md", "humanoid-prompt.md", "humanoid-prompt.en.md"]) await cp(path.join(ROOT, "docs", f), path.join(DIST, "docs", f));
 
 // 網站根目錄放一份 index.html, 資源改指向 web/; 網址就是 https://<帳號>.github.io/<repo>/
 const html = await readFile(path.join(ROOT, "web", "index.html"), "utf8");

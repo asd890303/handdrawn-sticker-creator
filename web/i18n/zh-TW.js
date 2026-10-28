@@ -37,8 +37,6 @@ export default {
   "bg.checker": "透明格",
   "bg.light": "白",
   "bg.dark": "深色",
-  "zoom.legend": "縮放",
-  "zoom.fit": "符合",
   "seed.label": "線條變化",
   "seed.down": "上一組線條",
   "seed.up": "下一組線條",
@@ -53,7 +51,7 @@ export default {
   "error.jsonFormat": "JSON 格式錯誤，無法整理：{msg}",
   "error.aiSpecLoad": "AI 規格載入失敗，請重新整理頁面",
   "confirm.delete": "要刪除「{name}」嗎？",
-  "confirm.clear": "會一併刪除列表裡的 {n} 張圖片，確定清除？",
+  "confirm.clear": "會刪除列表裡的 {n} 張圖片與所有設定，並還原成內建範例。確定重設？",
 
   "toast.downloaded": "已下載 {file}",
   "toast.downloadedPng": "已下載 {file}（{px}px）",
@@ -87,7 +85,13 @@ export default {
 
   "storage.title": "資料儲存",
   "storage.text": "你的圖片與設定只存在這個瀏覽器，不會上傳任何雲端。",
-  "storage.clear": "清除紀錄",
+  "storage.clear": "重設",
   "storage.ok": "知道了",
-  "toast.storageCleared": "已清除紀錄",
+  "toast.storageCleared": "已重設",
+  "mode.legend": "類型",
+  "mode.sticker": "貼紙",
+  "mode.human": "人形 Beta",
+  "status.human": "18 格都畫好了 (正面、背面、側面各走路 6 格)，圖集 {w}×{h} 像素",
+  "toast.pasteCleaned": "已移除 JSON 前後的說明文字與程式碼框 (共 {n} 字元)",
+  "status.warnings": "。提醒：{list}",
 };

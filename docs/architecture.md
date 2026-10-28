@@ -36,7 +36,29 @@ PNG
 
 ## 決定性
 
-亂數用 mulberry32，種子是 `name` 加介面上「線條變化」數字的雜湊值，座標輸出時四捨五入到 0.1。同一個執行環境裡，同樣的輸入一定產出相同字串，可以在測試裡比對。不同瀏覽器的三角函數在極少數情況下可能有末位差異，跨環境逐字比對前請先自行確認。
+亂數用 mulberry32，種子是 `name` 加介面上「線條變化」數字的雜湊值，座標輸出時四捨五入到 0.1。同一個執行環境裡，同樣的輸入產出相同字串，可以在測試裡比對。不同瀏覽器的三角函數偶爾有末位差異，跨環境逐字比對前先確認結果。
+
+## 人形繪圖 (Beta)
+
+`src/humanoid.js` 把一份「部位圖形」JSON 變成一整套逐幀圖。JSON 為 `leg`、`arm`、`torso`、`head` 各寫 `front`、`back`、`side` 三組貼紙圖形。骨架和動作寫在這個檔案裡，它把部位擺成貼紙規格的圖形清單 (`group` 加上位移、旋轉、縮放)，再交給同一個 `renderSvg` 畫。抖動外框、偏移填色、白色描邊因此和貼紙共用同一套。
+
+- **骨架**：正面和背面只畫左腿、左手，右邊用 `sx: -1` 鏡像。側面畫一條腿和一隻手，工具畫成前後兩條腿，依腳尖位置換算成以髖為軸的擺動角度。座標約定 (腳底 `y = 53`、髖 `y = 12`、肩 `y = -22`) 寫在 `docs/humanoid-prompt.md`。
+- **動作**：只有走路，每個視角 6 格，相位用連續的三角函數計算 (`phase()`)，整個人物隨步伐上下起伏。
+- **省字寫法**：AI 的回覆長度就是使用者的 token 花費，所以輸入格式有三個省字做法。測試逐格比對，結果和完整寫法相同。
+  1. `leg`、`arm`、`torso` 的 `back` 省略時沿用 `front`。`head.back` 沒有臉，要寫。
+  2. 人形裡 `poly` 的 `box` 預設 `false`，`dot` 的 `sw` 預設 `0`，`line` 的 `amp` 預設 `0.6`。
+  3. `poly`、`ell`、`line`、`dot` 可以寫成陣列簡寫，簽名在 `SHORT_SIGNATURE`。
+
+  `normalizeShape` 把簡寫展開成完整寫法，再交給貼紙驗證。安全規則不變，錯誤路徑仍是 `parts.leg.front[0].fill` 這種形式。
+- **回覆格式驗證**：`humanWarnings` 回傳不擋下的提醒 (`back` 和 `front` 相同可以省略、壓縮後超過 `SIZE_HINT` 字元)，顯示在狀態列。貼上時，`extractJson` (`src/extract.js`) 去掉 AI 回覆中 JSON 前後的說明文字和程式碼框，貼紙和人形都適用。規格文件要求 AI 輸出單行壓縮的 JSON，3000 字元以內。
+- **一致風格**：同一個角色的同一個視角固定用 `<name>_<view>` 當亂數種子，每格抖動相同，畫面不會閃。所有角色共用一副骨架和一套線寬、抖動設定。
+- **圖集格式**：18 格，768×384，每格 128、6 欄 3 列。順序是正面 0-5、背面 6-11、側面 12-17。向左用向右翻轉。常數在 `SHEET`、`ACTIONS`、`FRAMES`。`renderSheet` 把 18 格組成一張 SVG，預覽、複製 SVG、下載 PNG 都用它。
+- **陰影**：`shade` 預設 `true`，陰影畫在人物裡面，外面仍是透明；貼紙的 `canvas.shade` 預設關閉。陰影遮罩套在整個人物外層，走路起伏時遮罩位置固定，不跟著身體移動。
+- **沒有**：受傷、衝刺、死亡動作，配件 (帽子、背包、圍裙)，腳底光暈。
+- **驗證**：`validateHuman` 檢查頂層欄位，部位的每組圖形 (展開簡寫、補上預設值之後) 借用 `validateSpec` 檢查，錯誤路徑改寫成 `parts.leg.front[0].fill` 這種形式。因此貼紙的安全規則 (顏色白名單、座標與數量上限、`Object.hasOwn`) 對人形同樣有效。
+- **新增動作**：改 `ACTIONS`、`frameShapes` 的姿勢、`SHEET` 的列數與尺寸、兩份 `docs/humanoid-prompt*.md`；測試的格數是從 `ACTIONS` 推算的。
+- **給 AI 的文件**：`docs/humanoid-prompt.md` (及 `.en.md`)，文件最後的範例就是 `examples/humanoid/blue_worker.json`。`npm run skill` 從文件產生 skill 版 (`skills/handdrawn-humanoid/SKILL.md`)，測試檢查兩者同步，也檢查文件範例通過驗證且與範例檔一致。
+- **儲存**：人形角色和貼紙存在同一份列表 (`studio.items`，人形項目帶 `kind: "human"`)。`studio.mode` 記住上次的模式，`studio.humanSeeded` 記錄範例角色是否已放入，兩者都列在 `web/common.js` 的 `STORE_KEYS`。
 
 ## 安全設計
 
@@ -44,9 +66,12 @@ PNG
 
 - **只接受資料**：沒有 `eval`、沒有運算式、沒有外部資源引用。
 - **字串白名單**：會寫進 SVG 屬性的字串只有顏色，必須符合 `#hex`、`none` 或已定義的 `$名稱`。`name` 不可含 `< > " & ' \`。其餘欄位都必須是數字或布林。
-- **數量上限**：圖形數、巢狀深度、`repeat` 次數、展開後的總數都有上限，惡意的巨大 JSON 不會讓瀏覽器卡死。
-- **本機伺服器** (`scripts/serve.mjs`)：只綁 `127.0.0.1`、只接受 GET、擋掉 `..` 路徑穿越。開發模式只提供 `web/`、`src/`、`examples/` 三個目錄；預覽模式 (`npm run preview`) 只提供 `dist/`。
-`test/engine.test.js` 涵蓋注入字串、未知圖形、上限與輸出不含 `<script>` 等情況。
+- **數量上限**：圖形數、巢狀深度、`repeat` 次數、展開後的總數都有上限，巨大的惡意 JSON 不會讓瀏覽器卡死。座標與長度類數字的絕對值上限是 `LIMITS.coord` (10000)，`pen.dense()` 單邊最多插 120 點，超長的線也撐不爆點數。
+- **只認自己的欄位**：圖形種類 (`t`) 和調色盤名稱用 `Object.hasOwn` 查表，`constructor`、`toString` 這類原型鏈上的名字不會被當成合法值。`style`、`transform` 必須是物件。
+- **id 前綴**：`renderSvg` 的 `id` 會寫進 SVG 屬性 (濾鏡 id)，只接受英數字、底線與連字號；從 localStorage 讀回的圖片 id 也用同一規則過濾。
+- **本機伺服器** (`scripts/serve.mjs`)：只綁 `127.0.0.1`、只接受 GET、擋掉 `..` 路徑穿越。開發模式只提供 `web/`、`src/`、`examples/`、`docs/` 四個目錄 (`docs/` 是網頁的「AI 規格」視窗要讀的)；預覽模式 (`npm run preview`) 只提供 `dist/`。
+
+`test/engine.test.js` 涵蓋注入字串、未知圖形、上限與輸出不含 `<script>`。`test/hardening.test.js` 涵蓋超大座標、原型鏈名稱、欄位型別錯誤、id 前綴和伺服器路徑穿越。
 
 ## 新增圖形種類
 
@@ -57,7 +82,7 @@ PNG
 3. `docs/ai-prompt.md` 補上欄位說明和一行範例。AI 只會使用這份文件寫到的圖形。
 4. `test/engine.test.js` 補一個測試。
 
-新增的欄位如果是字串，一定要在 `spec.js` 用白名單正規表示式檢查，不能直接放進 SVG。
+新增的欄位如果是字串，要在 `spec.js` 用白名單正規表示式檢查，不能直接放進 SVG。
 
 ## 新增字母
 

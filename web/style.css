@@ -153,6 +153,13 @@ h1 { font-size: 21px; font-weight: 900; letter-spacing: -0.01em; }
   font-weight: 600;
 }
 .gallery-head { display: flex; align-items: center; gap: 8px; }
+/* 貼紙 / 人形 切換: 兩顆等寬的按鈕 */
+.seg.mode { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; flex: none; }
+.seg.mode label { display: block; }
+.seg.mode span { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 36px; padding: 2px 6px; font-size: 13px; }
+/* 列表很窄時兩顆改成上下排列 */
+.workspace[data-collapsed="true"] .seg.mode { grid-template-columns: 1fr; }
+.workspace[data-collapsed="true"] .seg.mode span { font-size: 12px; min-height: 32px; padding: 2px 4px; }
 .count { margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .empty { margin: -4px 0 0; color: var(--muted); font-size: 13px; }
 .empty[hidden] { display: none; }
@@ -163,7 +170,11 @@ h1 { font-size: 21px; font-weight: 900; letter-spacing: -0.01em; }
 .item:hover .label, .item:focus-within .label { padding-right: 60px; }
 @media (hover: none) {
   .item-actions { display: flex; }
-  .card .label { padding-right: 60px; }
+  .card .label { padding-right: 84px; }
+  .item-actions { gap: 6px; }
+  .icon-btn { width: 32px; height: 32px; font-size: 15px; }
+  .btn.small, .btn.icon, .seg span, .seed input { min-height: 38px; }
+  .btn.icon { width: 38px; }
 }
 .icon-btn {
   width: 24px;
@@ -400,9 +411,22 @@ a.btn { color: inherit; text-decoration: none; }
 
 /* ---------- 窄螢幕: 範例變橫向捲動列, 編輯與預覽用分頁切換 ---------- */
 @media (max-width: 860px) {
-  .notice { left: 16px; bottom: 16px; }
-  .bar { flex-wrap: wrap; gap: 10px; padding: 10px 16px; }
-  h1 { font-size: 18px; }
+  .notice {
+    position: static;
+    width: auto;
+    padding: 10px 16px;
+    border-width: 2px 0 0;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 13px;
+  }
+  .notice p { margin-bottom: 8px; }
+  .bar { flex-wrap: wrap; gap: 8px 10px; padding: 8px 16px; }
+  .brand { min-width: 0; }
+  .logo { width: 36px; height: 36px; }
+  h1 { font-size: 17px; white-space: nowrap; }
+  .subtitle { white-space: nowrap; }
+  .bar-actions { flex-wrap: wrap; justify-content: flex-end; }
   .tabs {
     display: flex;
     gap: 8px;
@@ -432,6 +456,9 @@ a.btn { color: inherit; text-decoration: none; }
     overflow-x: auto;
   }
   .gallery h2, .empty { display: none; }
+  /* 窄螢幕列表是橫向的一條: 切換鈕放在最前面, 不被擠掉 */
+  .gallery .seg.mode { grid-template-columns: auto auto; }
+  .gallery .seg.mode span { width: auto; padding: 2px 12px; }
   .subtitle { font-size: 13px; }
   .cards { grid-auto-flow: column; grid-auto-columns: max-content; }
   .gallery .btn.wide { width: auto; white-space: nowrap; }
@@ -439,8 +466,19 @@ a.btn { color: inherit; text-decoration: none; }
   .pane { flex: 1; }
   .workspace[data-view="edit"] .preview-pane,
   .workspace[data-view="preview"] .editor-pane { display: none; }
+  /* 預覽分頁: 預覽區固定高度, 整頁可捲動, 矮螢幕上控制列才不會被切掉 */
+  .workspace { overflow-y: auto; }
+  .workspace[data-view="preview"] .preview-pane { flex: none; }
+  .stage { flex: none; height: clamp(240px, 62vw, 380px); grid-template: minmax(0, 1fr) / minmax(0, 1fr); padding: 16px; }
   .actions { margin-left: 0; width: 100%; }
   .actions .btn { flex: 1; }
+}
+
+@media (max-width: 480px) {
+  .subtitle { display: none; }
+  .bar-actions { width: 100%; margin-left: 0; justify-content: flex-start; }
+  .bar-actions .lang { margin-left: auto; }
+  .dock { padding: 12px 16px; gap: 10px 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

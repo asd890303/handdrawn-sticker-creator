@@ -37,8 +37,6 @@ export default {
   "bg.checker": "Transparent",
   "bg.light": "White",
   "bg.dark": "Dark",
-  "zoom.legend": "Zoom",
-  "zoom.fit": "Fit",
   "seed.label": "Line variation",
   "seed.down": "Previous line set",
   "seed.up": "Next line set",
@@ -53,7 +51,7 @@ export default {
   "error.jsonFormat": "Invalid JSON, can't tidy: {msg}",
   "error.aiSpecLoad": "Couldn't load the AI spec. Reload the page.",
   "confirm.delete": "Delete “{name}”?",
-  "confirm.clear": "This also deletes the {n} image(s) in your list. Clear anyway?",
+  "confirm.clear": "This deletes the {n} image(s) in your list and all settings, and restores the built-in examples. Reset anyway?",
 
   "toast.downloaded": "Downloaded {file}",
   "toast.downloadedPng": "Downloaded {file} ({px}px)",
@@ -87,7 +85,13 @@ export default {
 
   "storage.title": "Data storage",
   "storage.text": "No cookies. Your images and settings stay in this browser and are never uploaded.",
-  "storage.clear": "Clear saved data",
+  "storage.clear": "Reset",
   "storage.ok": "Got it",
-  "toast.storageCleared": "Saved data cleared",
+  "toast.storageCleared": "Reset done",
+  "mode.legend": "Type",
+  "mode.sticker": "Sticker",
+  "mode.human": "Humanoid Beta",
+  "status.human": "All 18 frames drawn (6 walk frames each from front, back and side), sheet {w}×{h} px",
+  "toast.pasteCleaned": "Removed the text and code fence around the JSON ({n} characters)",
+  "status.warnings": ". Notes: {list}",
 };
