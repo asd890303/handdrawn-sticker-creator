@@ -71,6 +71,8 @@ const nodes = (list, ctx, idx) => list.map((s) => node(s, ctx, idx)).join("");
 
 // 回傳完整 SVG 字串。同一個 spec 與 seed 一定產出相同結果; 要在同一頁放多張 SVG 時, 用 id 前綴避免濾鏡 id 衝突。
 export function renderSvg(spec, { seed = 0, id = "" } = {}) {
+  // id 會寫進 SVG 屬性, 只接受英數字、底線與連字號
+  if (typeof id !== "string" || !/^[\w-]*$/.test(id)) throw new SpecError(["id: 只能是英數字、底線與連字號"]);
   const errors = validateSpec(spec);
   if (errors.length) throw new SpecError(errors);
   const pen = new Pen(mulberry32(hashSeed(`${spec.name}:${seed}`)), spec.style);
