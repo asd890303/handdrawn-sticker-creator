@@ -45,7 +45,8 @@ export class Pen {
     for (let i = 0; i < m; i++) {
       const [x0, y0] = p[i];
       const [x1, y1] = p[(i + 1) % p.length];
-      const n = Math.max(1, Math.floor(Math.hypot(x1 - x0, y1 - y0) / step));
+      // 單邊最多插 120 點, 超長的邊不會把點數撐爆
+      const n = Math.min(120, Math.max(1, Math.floor(Math.hypot(x1 - x0, y1 - y0) / step)));
       for (let t = 0; t < n; t++) out.push([x0 + ((x1 - x0) * t) / n, y0 + ((y1 - y0) * t) / n]);
     }
     return out;

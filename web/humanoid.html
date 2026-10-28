@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>人形繪圖 (Beta) - Handdrawn Sticker Creator</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="humanoid.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <span id="logo" class="logo" aria-hidden="true"></span>
+      <h1 data-i18n="human.title">人形繪圖</h1>
+      <span class="beta">Beta</span>
+    </div>
+    <div class="bar-actions">
+      <a class="btn ghost small" href="index.html" data-i18n="human.back">回到貼紙</a>
+      <button id="aiSpecBtn" class="btn primary small" type="button" data-i18n="nav.aiSpec">AI 規格</button>
+      <label class="lang">
+        <span class="visually-hidden" data-i18n="lang.label">語言</span>
+        <select id="lang"></select>
+      </label>
+    </div>
+  </header>
+
+  <main class="human">
+    <section class="pane human-edit" aria-labelledby="hEditorTitle">
+      <div class="pane-head">
+        <h2 id="hEditorTitle" data-i18n="human.editor">角色規格</h2>
+        <div class="tools">
+          <select id="preset" data-i18n-attr="aria-label:human.preset"></select>
+          <button id="hSaveJson" class="btn ghost small" type="button" data-i18n="editor.saveJson">下載 JSON</button>
+        </div>
+      </div>
+      <textarea id="hEditor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="hStatus"></textarea>
+      <div id="hStatus" class="status" role="status" aria-live="polite"></div>
+      <div class="human-note">
+        <span data-i18n="storage.text"></span>
+        <button id="hReset" class="btn ghost small" type="button" data-i18n="storage.clear">重設</button>
+      </div>
+    </section>
+
+    <section class="pane human-view">
+      <div class="stage bg-mat human-stage">
+        <div class="anim-box"><div id="anim" class="anim"></div></div>
+        <div id="sheet" class="sheet"></div>
+      </div>
+      <div class="dock human-dock">
+        <fieldset class="seg">
+          <legend data-i18n="human.action">動作</legend>
+          <label><input type="radio" name="action" value="walk" checked><span data-i18n="human.walk">走路</span></label>
+          <label><input type="radio" name="action" value="hurt"><span data-i18n="human.hurt">受傷</span></label>
+          <label><input type="radio" name="action" value="dash"><span data-i18n="human.dash">衝刺</span></label>
+        </fieldset>
+        <fieldset class="seg">
+          <legend data-i18n="human.view">方向</legend>
+          <label><input type="radio" name="view" value="front" checked><span data-i18n="human.front">正面</span></label>
+          <label><input type="radio" name="view" value="back"><span data-i18n="human.backView">背面</span></label>
+          <label><input type="radio" name="view" value="side"><span data-i18n="human.side">向右</span></label>
+          <label><input type="radio" name="view" value="left"><span data-i18n="human.left">向左</span></label>
+        </fieldset>
+        <div class="seed" role="group" aria-labelledby="hSeedLabel">
+          <span id="hSeedLabel" class="legend" data-i18n="seed.label">線條變化</span>
+          <button id="hSeedDown" class="btn ghost icon" type="button">−</button>
+          <input id="hSeed" type="number" value="0" step="1" inputmode="numeric" aria-labelledby="hSeedLabel">
+          <button id="hSeedUp" class="btn ghost icon" type="button">+</button>
+          <button id="hDice" class="btn ghost small" type="button" data-i18n="seed.random">隨機</button>
+        </div>
+        <fieldset class="seg">
+          <legend data-i18n="scale.legend">輸出大小</legend>
+          <label><input type="radio" name="hscale" value="1" checked><span>1×</span></label>
+          <label><input type="radio" name="hscale" value="2"><span>2×</span></label>
+          <label><input type="radio" name="hscale" value="4"><span>4×</span></label>
+        </fieldset>
+        <div class="actions">
+          <button id="hExport" class="btn primary" type="button" data-i18n="human.exportSheet">下載圖集 PNG</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="aiSpec" class="wide" aria-labelledby="aiSpecTitle">
+    <div class="dialog-body">
+      <h2 id="aiSpecTitle" data-i18n="human.aiTitle">人形 AI 規格</h2>
+      <p data-i18n="human.aiIntro"></p>
+      <pre id="aiSpecText" tabindex="0"></pre>
+      <div class="dialog-actions">
+        <a id="aiSpecDownload" class="btn ghost" download="humanoid-prompt.md" data-i18n="human.aiDownload">下載規格</a>
+        <form method="dialog"><button class="btn ghost" data-i18n="dialog.close">關閉</button></form>
+        <button id="aiSpecCopy" class="btn primary" type="button" data-i18n="aiSpec.copy">複製全部</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="humanoid.js"></script>
+</body>
+</html>

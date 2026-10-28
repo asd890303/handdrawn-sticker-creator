@@ -1,0 +1,6 @@
+[
+  { "file": "humanoid/blue_worker.json", "title": "藍衣工人" },
+  { "file": "humanoid/pink_sales.json", "title": "粉衣業務" },
+  { "file": "humanoid/orange_courier.json", "title": "橘衣外送員" },
+  { "file": "humanoid/white_chef.json", "title": "白衣廚師" }
+]
