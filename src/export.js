@@ -21,14 +21,3 @@ export async function svgToPngBlob(svg, width, height, scale = 1) {
   return toBlob(canvas);
 }
 
-// 多張 SVG 排成一張透明 PNG 圖集 (由左到右、由上到下)
-export async function svgsToSheetBlob(svgs, cell, cols, scale = 1) {
-  const rows = Math.ceil(svgs.length / cols);
-  const canvas = document.createElement("canvas");
-  canvas.width = cell * cols * scale;
-  canvas.height = cell * rows * scale;
-  const ctx = canvas.getContext("2d");
-  const imgs = await Promise.all(svgs.map(loadSvg));
-  imgs.forEach((img, k) => ctx.drawImage(img, (k % cols) * cell * scale, Math.floor(k / cols) * cell * scale, cell * scale, cell * scale));
-  return toBlob(canvas);
-}

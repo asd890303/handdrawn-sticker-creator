@@ -1,6 +1,6 @@
-import { renderSvg, SpecError } from "../src/index.js";
+import { extractJson, HumanError, renderFrame, renderSheet, renderSvg, SpecError } from "../src/index.js";
 import { svgToPngBlob } from "../src/export.js";
-import { specFile, t } from "./i18n/index.js";
+import { humanSpecFile, specFile, t } from "./i18n/index.js";
 import { $, bindAiSpec, bindLang, bindSeed, download, fileBase, showStatus, store, toast } from "./common.js";
 import { LOGO } from "./logo.js";
 
@@ -11,8 +11,11 @@ const workspace = $(".workspace");
 
 const MAX_ITEMS = 100;
 const TITLE_MAX = 40;
-// items: [{ id, title, json, updatedAt }]。json 存編輯區原文, 有錯也照存, 重新整理才不會丟失
-const state = { seed: 0, scale: 1, current: null, items: [], currentId: "" };
+// items: [{ id, title, json, updatedAt, kind? }]。json 存編輯區原文, 有錯也照存, 重新整理才不會丟失
+// kind: "human" 是人形角色 (Beta), 沒有 kind 的是貼紙; mode 決定左邊列表顯示哪一種
+const state = { seed: 0, scale: 1, current: null, items: [], currentId: "", mode: "sticker" };
+const isHuman = (item) => item?.kind === "human";
+const visibleItems = () => state.items.filter((x) => isHuman(x) === (state.mode === "human"));
 
 const BLANK = {
   version: 1,
@@ -23,6 +26,9 @@ const BLANK = {
     { t: "dot", x: -7, y: -7, r: 3, fill: "#fff3e0", sw: 0 },
   ],
 };
+
+// 新增人形角色時用的範本 (examples/humanoid/ 的第一個)
+const HUMAN_BLANK_FILE = "humanoid/blue_worker.json";
 
 // ---------- JSON 整理: 短的物件與座標陣列保持一行, 長的才換行 ----------
 const inline = (x) =>
@@ -44,6 +50,7 @@ function pretty(v, ind = "") {
 // ---------- 渲染 ----------
 const countShapes = (list) => list.reduce((n, s) => n + 1 + (Array.isArray(s.children) ? countShapes(s.children) : 0), 0);
 const currentItem = () => state.items.find((x) => x.id === state.currentId);
+const specFileForMode = () => (state.mode === "human" ? humanSpecFile() : specFile());
 
 const showErrors = (errors) => showStatus($("#status"), "", errors);
 const setStatus = (text) => showStatus($("#status"), text);
@@ -72,15 +79,17 @@ function render() {
     return;
   }
   try {
-    state.current = renderSvg(spec, { seed: state.seed, id: "pv-" });
+    // 人形: 36 格排成一張 768×768 的圖集 (預覽、複製 SVG、下載 PNG 都是這一張)
+    state.current = isHuman(item) ? renderSheet(spec, { seed: state.seed, id: "pv-" }) : renderSvg(spec, { seed: state.seed, id: "pv-" });
   } catch (e) {
-    if (!(e instanceof SpecError)) throw e;
+    if (!(e instanceof SpecError || e instanceof HumanError)) throw e;
     showErrors(e.errors);
     return;
   }
   $("#preview").innerHTML = state.current.svg;
   updateScaleLabels();
-  setStatus(t("status.ok", { w: spec.canvas.w, h: spec.canvas.h, n: countShapes(spec.shapes) }));
+  const warn = state.current.warnings?.length ? t("status.warnings", { list: state.current.warnings.join("；") }) : "";
+  setStatus((isHuman(item) ? t("status.human", { w: state.current.width, h: state.current.height }) : t("status.ok", { w: spec.canvas.w, h: spec.canvas.h, n: countShapes(spec.shapes) })) + warn);
   updateThumb(item);
 }
 
@@ -95,7 +104,9 @@ function persist() {
 
 function thumbSvg(item) {
   try {
-    return renderSvg(JSON.parse(item.json), { id: `th-${item.id}-` }).svg;
+    const spec = JSON.parse(item.json);
+    // 人形的縮圖是正面走路的第一格
+    return isHuman(item) ? renderFrame(spec, "front", 0, { id: `th-${item.id}-` }).svg : renderSvg(spec, { id: `th-${item.id}-` }).svg;
   } catch {
     return "";
   }
@@ -119,7 +130,7 @@ function iconButton(cls, text, label, onClick) {
 function renderList() {
   const ul = $("#items");
   ul.replaceChildren();
-  for (const item of state.items) {
+  for (const item of visibleItems()) {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "card";
@@ -148,7 +159,7 @@ function renderList() {
   }
   $("#count").textContent = `${state.items.length}/${MAX_ITEMS}`;
   $("#addItem").disabled = state.items.length >= MAX_ITEMS;
-  $("#itemsEmpty").hidden = state.items.length > 0;
+  $("#itemsEmpty").hidden = visibleItems().length > 0;
   editor.disabled = !currentItem();
 }
 
@@ -209,20 +220,19 @@ function removeItem(id) {
   if (idx < 0 || !confirm(t("confirm.delete", { name: state.items[idx].title }))) return;
   state.items.splice(idx, 1);
   persist();
-  if (id === state.currentId) {
-    const next = state.items[idx] ?? state.items[idx - 1];
-    state.currentId = next ? next.id : "";
-  }
+  if (id === state.currentId) state.currentId = visibleItems()[0]?.id ?? "";
   renderList();
   select(state.currentId);
 }
 
-function addItem() {
+async function addItem() {
   if (state.items.length >= MAX_ITEMS) {
     toast(t("items.full", { max: MAX_ITEMS }));
     return;
   }
-  const item = { id: newId(), title: t("items.untitled", { n: state.items.length + 1 }), json: pretty(BLANK), updatedAt: Date.now() };
+  const human = state.mode === "human";
+  const json = human ? await (await fetch(new URL(HUMAN_BLANK_FILE, EXAMPLES_DIR))).text() : pretty(BLANK);
+  const item = { id: newId(), title: t("items.untitled", { n: visibleItems().length + 1 }), json, updatedAt: Date.now(), ...(human ? { kind: "human" } : {}) };
   state.items.push(item);
   persist();
   renderList();
@@ -241,6 +251,15 @@ function flushSave() {
   saveTimer = null;
   persist();
 }
+editor.addEventListener("paste", (e) => {
+  const text = e.clipboardData?.getData("text") ?? "";
+  const found = extractJson(text);
+  if (!found || found.removed === 0 || found.json.length === text.length) return;   // 本來就是乾淨的 JSON (或找不到) 就照一般貼上
+  e.preventDefault();
+  editor.setRangeText(found.json, editor.selectionStart, editor.selectionEnd, "end");
+  editor.dispatchEvent(new Event("input"));
+  toast(t("toast.pasteCleaned", { n: found.removed }));
+});
 editor.addEventListener("input", () => {
   const item = currentItem();
   if (!item) return;
@@ -274,6 +293,38 @@ async function loadItems() {
   state.items = items;
   persist();
   return items;
+}
+
+// 人形範例: 第一次進入人形模式時放入 (只放一次, 使用者刪空之後不會再補回)
+async function seedHumanItems() {
+  if (store.get("studio.humanSeeded") === "1") return;
+  const list = await (await fetch(new URL("humanoid/index.json", EXAMPLES_DIR))).json();
+  for (const ex of list) {
+    if (state.items.length >= MAX_ITEMS) break;
+    const json = await (await fetch(new URL(ex.file, EXAMPLES_DIR))).text();
+    state.items.push({ id: newId(), title: ex.title, json, updatedAt: Date.now(), kind: "human" });
+  }
+  store.set("studio.humanSeeded", "1");
+  persist();
+}
+
+// 切換 貼紙 / 人形: 左邊列表換成對應的項目, AI 規格也跟著換
+function setMode(mode) {
+  flushSave();
+  state.mode = mode;
+  store.set("studio.mode", mode);
+  for (const input of document.querySelectorAll('input[name="mode"]')) input.checked = input.value === mode;
+  workspace.dataset.mode = mode;
+  if (!visibleItems().some((x) => x.id === state.currentId)) state.currentId = visibleItems()[0]?.id ?? "";
+  renderList();
+  select(state.currentId);
+  aiSpec.refresh();
+}
+for (const input of document.querySelectorAll('input[name="mode"]')) {
+  input.addEventListener("change", async () => {
+    if (input.value === "human") await seedHumanItems();
+    setMode(input.value);
+  });
 }
 
 // ---------- 編輯工具 ----------
@@ -333,7 +384,7 @@ $("#copy").addEventListener("click", async () => {
 // ---------- AI 規格視窗 ----------
 const aiSpec = bindAiSpec(
   { open: $("#aiSpecBtn"), dialog: $("#aiSpec"), text: $("#aiSpecText"), copy: $("#aiSpecCopy"), link: $("#aiSpecDownload"), note: $("#aiSpecNote") },
-  specFile,
+  specFileForMode,
 );
 
 // ---------- 版面: 拖曳分隔線, 窄螢幕分頁 ----------
@@ -433,7 +484,13 @@ if (savedBg) {
 }
 
 state.items = await loadItems();
+// 還原上次的模式 (人形模式需要已經有人形項目才切得過去)
+const savedMode = store.get("studio.mode") === "human" && state.items.some(isHuman) ? "human" : "sticker";
+state.mode = savedMode;
+for (const input of document.querySelectorAll('input[name="mode"]')) input.checked = input.value === savedMode;
+workspace.dataset.mode = savedMode;
 const lastId = store.get("studio.current");
-state.currentId = state.items.some((x) => x.id === lastId) ? lastId : (state.items[0]?.id ?? "");
+const shown = visibleItems();
+state.currentId = shown.some((x) => x.id === lastId) ? lastId : (shown[0]?.id ?? "");
 renderList();
 select(state.currentId);

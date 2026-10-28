@@ -18,7 +18,6 @@
       <span class="subtitle" lang="zh-TW">手繪貼紙產生器</span>
     </div>
     <div class="bar-actions">
-      <a class="btn ghost small" href="web/humanoid.html" data-i18n="nav.human">人形繪圖 Beta</a>
       <button id="aiSpecBtn" class="btn primary small" type="button" data-i18n="nav.aiSpec">AI 規格</button>
       <button id="helpBtn" class="btn ghost small" type="button" data-i18n="nav.help">說明</button>
       <label class="lang">
@@ -35,6 +34,11 @@
 
   <main class="workspace" data-view="edit">
     <aside class="gallery" aria-labelledby="itemsTitle">
+      <fieldset class="seg mode">
+        <legend class="visually-hidden" data-i18n="mode.legend">類型</legend>
+        <label><input type="radio" name="mode" value="sticker" checked><span data-i18n="mode.sticker">貼紙</span></label>
+        <label><input type="radio" name="mode" value="human"><span data-i18n="mode.human">人形 Beta</span></label>
+      </fieldset>
       <div class="gallery-head">
         <h2 id="itemsTitle" data-i18n="items.title">圖片列表</h2>
         <span id="count" class="count">0/100</span>
