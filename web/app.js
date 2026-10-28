@@ -22,7 +22,7 @@ const store = {
 const MAX_ITEMS = 100;
 const TITLE_MAX = 40;
 // items: [{ id, title, json, updatedAt }]。json 存編輯區原文, 有錯也照存, 重新整理才不會丟失
-const state = { seed: 0, zoom: "fit", scale: 1, current: null, items: [], currentId: "" };
+const state = { seed: 0, scale: 1, current: null, items: [], currentId: "" };
 
 const BLANK = {
   version: 1,
@@ -88,16 +88,6 @@ function showStatus(text) {
   el.textContent = text;
 }
 
-function applyZoom() {
-  const preview = $("#preview");
-  const svg = preview.querySelector("svg");
-  if (!svg || !state.current) return;
-  preview.classList.toggle("fit", state.zoom === "fit");
-  const z = Number(state.zoom);
-  svg.style.width = state.zoom === "fit" ? "" : `${state.current.width * z}px`;
-  svg.style.height = state.zoom === "fit" ? "" : `${state.current.height * z}px`;
-}
-
 function updateScaleLabels() {
   if (!state.current) return;
   for (const span of document.querySelectorAll("#scaleSeg span[data-scale]")) {
@@ -129,7 +119,6 @@ function render() {
     return;
   }
   $("#preview").innerHTML = state.current.svg;
-  applyZoom();
   updateScaleLabels();
   showStatus(t("status.ok", { w: spec.canvas.w, h: spec.canvas.h, n: countShapes(spec.shapes) }));
   updateThumb(item);
@@ -356,9 +345,6 @@ $("#saveJson").addEventListener("click", () => {
 // ---------- 預覽與輸出控制 ----------
 for (const input of document.querySelectorAll('input[name="bg"]')) {
   input.addEventListener("change", () => { $("#stage").className = `stage bg-${input.value}`; store.set("studio.bg", input.value); });
-}
-for (const input of document.querySelectorAll('input[name="zoom"]')) {
-  input.addEventListener("change", () => { state.zoom = input.value; applyZoom(); });
 }
 for (const input of document.querySelectorAll('input[name="scale"]')) {
   input.addEventListener("change", () => { state.scale = Number(input.value); });

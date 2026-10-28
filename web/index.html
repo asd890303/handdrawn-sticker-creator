@@ -63,7 +63,7 @@
 
     <section class="pane preview-pane" data-i18n-attr="aria-label:preview.aria">
       <div id="stage" class="stage bg-mat">
-        <div id="preview" class="preview"></div>
+        <div id="preview" class="preview fit"></div>
       </div>
       <div class="dock">
         <fieldset class="seg">
@@ -72,12 +72,6 @@
           <label><input type="radio" name="bg" value="checker"><span data-i18n="bg.checker">透明格</span></label>
           <label><input type="radio" name="bg" value="light"><span data-i18n="bg.light">白</span></label>
           <label><input type="radio" name="bg" value="dark"><span data-i18n="bg.dark">深色</span></label>
-        </fieldset>
-        <fieldset class="seg">
-          <legend data-i18n="zoom.legend">縮放</legend>
-          <label><input type="radio" name="zoom" value="fit" checked><span data-i18n="zoom.fit">符合</span></label>
-          <label><input type="radio" name="zoom" value="1"><span>100%</span></label>
-          <label><input type="radio" name="zoom" value="2"><span>200%</span></label>
         </fieldset>
         <div class="seed" role="group" aria-labelledby="seedLabel">
           <span id="seedLabel" class="legend" data-i18n="seed.label">線條變化</span>
@@ -142,7 +136,7 @@
       <h3 data-i18n="storage.title">資料儲存</h3>
       <p data-i18n="storage.text"></p>
       <div class="dialog-actions">
-        <button class="btn ghost js-clear-storage" type="button" data-i18n="storage.clear">清除紀錄</button>
+        <button class="btn ghost js-clear-storage" type="button" data-i18n="storage.clear">重設</button>
         <button class="btn primary" value="close" data-i18n="help.ok">知道了</button>
       </div>
     </form>
@@ -151,7 +145,7 @@
   <section id="notice" class="notice" data-i18n-attr="aria-label:storage.title" hidden>
     <p data-i18n="storage.text"></p>
     <div class="notice-actions">
-      <button class="btn ghost small js-clear-storage" type="button" data-i18n="storage.clear">清除紀錄</button>
+      <button class="btn ghost small js-clear-storage" type="button" data-i18n="storage.clear">重設</button>
       <button id="noticeOk" class="btn primary small" type="button" data-i18n="storage.ok">知道了</button>
     </div>
   </section>
