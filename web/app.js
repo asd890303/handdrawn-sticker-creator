@@ -1,4 +1,4 @@
-import { extractJson, HumanError, renderFrame, renderSheet, renderSvg, SpecError } from "../src/index.js";
+import { extractJson, parseLoose, HumanError, renderFrame, renderSheet, renderSvg, SpecError } from "../src/index.js";
 import { svgToPngBlob } from "../src/export.js";
 import { humanSpecFile, specFile, t } from "./i18n/index.js";
 import { $, bindAiSpec, bindLang, bindSeed, download, fileBase, showStatus, store, toast } from "./common.js";
@@ -71,15 +71,16 @@ function render() {
     setStatus(t("items.empty"));
     return;
   }
-  let spec;
+  // AI 的 JSON 常有彎引號、沒加引號的欄位名稱、註解、結尾多餘的逗號: 先自動修正再畫, 編輯區的文字不動
+  let spec, fixes;
   try {
-    spec = JSON.parse(editor.value);
+    ({ value: spec, fixes } = parseLoose(editor.value));
   } catch (e) {
-    showErrors([t("error.json", { msg: e.message })]);
+    showErrors([t("error.json", { msg: e.message }), t("error.jsonHint")]);
     return;
   }
   try {
-    // 人形: 36 格排成一張 768×768 的圖集 (預覽、複製 SVG、下載 PNG 都是這一張)
+    // 人形: 18 格排成一張 768×384 的圖集 (預覽、複製 SVG、下載 PNG 都是這一張)
     state.current = isHuman(item) ? renderSheet(spec, { seed: state.seed, id: "pv-" }) : renderSvg(spec, { seed: state.seed, id: "pv-" });
   } catch (e) {
     if (!(e instanceof SpecError || e instanceof HumanError)) throw e;
@@ -89,7 +90,8 @@ function render() {
   $("#preview").innerHTML = state.current.svg;
   updateScaleLabels();
   const warn = state.current.warnings?.length ? t("status.warnings", { list: state.current.warnings.join("；") }) : "";
-  setStatus((isHuman(item) ? t("status.human", { w: state.current.width, h: state.current.height }) : t("status.ok", { w: spec.canvas.w, h: spec.canvas.h, n: countShapes(spec.shapes) })) + warn);
+  const fixed = fixes.length ? t("status.fixed", { list: fixes.join("、") }) : "";
+  setStatus((isHuman(item) ? t("status.human", { w: state.current.width, h: state.current.height }) : t("status.ok", { w: spec.canvas.w, h: spec.canvas.h, n: countShapes(spec.shapes) })) + fixed + warn);
   updateThumb(item);
 }
 
@@ -104,7 +106,7 @@ function persist() {
 
 function thumbSvg(item) {
   try {
-    const spec = JSON.parse(item.json);
+    const spec = parseLoose(item.json).value;
     // 人形的縮圖是正面走路的第一格
     return isHuman(item) ? renderFrame(spec, "front", 0, { id: `th-${item.id}-` }).svg : renderSvg(spec, { id: `th-${item.id}-` }).svg;
   } catch {
@@ -254,11 +256,11 @@ function flushSave() {
 editor.addEventListener("paste", (e) => {
   const text = e.clipboardData?.getData("text") ?? "";
   const found = extractJson(text);
-  if (!found || found.removed === 0 || found.json.length === text.length) return;   // 本來就是乾淨的 JSON (或找不到) 就照一般貼上
+  if (!found || (found.removed === 0 && !found.fixes.length)) return;   // 本來就是乾淨的 JSON (或找不到) 就照一般貼上
   e.preventDefault();
   editor.setRangeText(found.json, editor.selectionStart, editor.selectionEnd, "end");
   editor.dispatchEvent(new Event("input"));
-  toast(t("toast.pasteCleaned", { n: found.removed }));
+  toast([found.removed ? t("toast.pasteCleaned", { n: found.removed }) : "", found.fixes.length ? t("toast.pasteFixed", { list: found.fixes.join("、") }) : ""].filter(Boolean).join("；"));
 });
 editor.addEventListener("input", () => {
   const item = currentItem();
@@ -330,7 +332,7 @@ for (const input of document.querySelectorAll('input[name="mode"]')) {
 // ---------- 編輯工具 ----------
 $("#format").addEventListener("click", () => {
   try {
-    editor.value = pretty(JSON.parse(editor.value));
+    editor.value = pretty(parseLoose(editor.value).value);   // 順便把自動修正的結果寫回編輯區
     editor.dispatchEvent(new Event("input"));
   } catch (e) {
     showErrors([t("error.jsonFormat", { msg: e.message })]);

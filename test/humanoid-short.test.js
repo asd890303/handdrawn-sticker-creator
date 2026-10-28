@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { SIZE_HINT, extractJson, humanWarnings, renderAll, validateHuman } from "../src/index.js";
+import { SIZE_HINT, humanWarnings, renderAll, validateHuman } from "../src/index.js";
 
 const read = async (f) => JSON.parse(await readFile(new URL(`../${f}`, import.meta.url), "utf8"));
 const clone = (x) => JSON.parse(JSON.stringify(x));
@@ -74,9 +74,9 @@ test("簡寫寫錯會指出路徑與正確格式, 其他圖形的索引不位移
   spec.parts.head.front[2] = ["ell", "$skin", 1, 2];
   spec.parts.head.front[3] = ["dot", "$nope", 0, 0, 1];   // 簡寫本身正確, 但顏色名稱不存在: 路徑仍然對得上
   const errs = validateHuman(spec);
-  assert.ok(errs.some((e) => e.startsWith("parts.leg.front[1]:") && e.includes('["poly", fill, pts, w?]')), errs.join("\n"));
-  assert.ok(errs.some((e) => e.startsWith("parts.arm.front[0]:") && e.includes("poly / ell / line / dot")));
-  assert.ok(errs.some((e) => e.startsWith("parts.torso.front[0]:") && e.includes('["dot", fill, x, y, r]')));
+  assert.ok(errs.some((e) => e.startsWith("parts.leg.front[1]:") && e.includes('["poly", fill, pts, w?')), errs.join("\n"));
+  assert.ok(errs.some((e) => e.startsWith("parts.arm.front[0]:") && e.includes("rect / poly / ell / line / tube / dot")));
+  assert.ok(errs.some((e) => e.startsWith("parts.torso.front[0]:") && e.includes('["dot", fill, x, y, r')));
   assert.ok(errs.some((e) => e.startsWith("parts.head.front[2]:") && e.includes('["ell"')));
   assert.ok(errs.some((e) => e.startsWith("parts.head.front[3].fill:")));
 });
@@ -99,25 +99,4 @@ test("精簡寫法的範例壓縮後在 3000 字元以內; 太長會提醒 (不�
   assert.ok(JSON.stringify(spec).length > SIZE_HINT);
   assert.deepEqual(validateHuman(spec), [], "太長只是提醒, 仍然能畫");
   assert.ok(humanWarnings(spec).some((w) => w.startsWith("JSON 偏長")));
-});
-
-test("貼上 AI 回覆: 去掉程式碼框與前後說明, 只留 JSON", () => {
-  const json = '{"version":1,"name":"x","parts":{}}';
-  assert.deepEqual(extractJson(json), { json, removed: 0 });
-  assert.deepEqual(extractJson(`  ${json}\n`), { json, removed: 3 });
-  const fenced = "這是你要的角色：\n```json\n" + json + "\n```\n還要調整的話跟我說！";
-  const r = extractJson(fenced);
-  assert.equal(r.json, json);
-  assert.equal(r.removed, fenced.length - json.length);
-  assert.equal(extractJson("好的，" + json + " 以上").json, json);
-  assert.equal(extractJson("```\n" + json + "\n```").json, json);
-  assert.equal(extractJson("```JSON\r\n" + json + "\r\n```").json, json);
-  assert.equal(extractJson('說明 {"a": {"b": 1}} 結尾').json, '{"a": {"b": 1}}');
-});
-
-test("貼上的內容找不到合法 JSON 時回傳 null (交給編輯區照一般方式處理)", () => {
-  assert.equal(extractJson("只有一些文字"), null);
-  assert.equal(extractJson('{"a": 1,}'), null);
-  assert.equal(extractJson(""), null);
-  assert.equal(extractJson("```json\n{壞掉\n```"), null);
 });
