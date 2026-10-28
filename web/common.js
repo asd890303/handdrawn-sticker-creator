@@ -4,7 +4,7 @@ import { LOCALES, locale, setLocale, detectLocale, t } from "./i18n/index.js";
 export const $ = (s) => document.querySelector(s);
 
 // 本站存在 localStorage 的全部項目; 「資料儲存」聲明的內容要和這份清單一致
-export const STORE_KEYS = ["studio.items", "studio.current", "studio.lang", "studio.bg", "studio.split", "studio.galleryW", "studio.notice", "studio.human"];
+export const STORE_KEYS = ["studio.items", "studio.current", "studio.lang", "studio.bg", "studio.split", "studio.galleryW", "studio.notice", "studio.mode", "studio.humanSeeded"];
 export const store = {
   get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
   // 回傳是否寫入成功; 私密視窗、被封鎖或空間不足時為 false

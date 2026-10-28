@@ -24,14 +24,7 @@ for (const f of files) {
   if (!re.test(out)) throw new Error(`web/index.html 找不到 ${f}, 請同步更新 scripts/build.mjs`);
   out = out.replace(re, `$1="web/${f}"`);
 }
-// 首頁在根目錄、人形頁在 web/ 底下: 首頁的連結要多一層 web/, 人形頁回首頁的連結要往上一層
-if (!out.includes('href="humanoid.html"')) throw new Error("web/index.html 找不到人形頁連結, 請同步更新 scripts/build.mjs");
-out = out.replace('href="humanoid.html"', 'href="web/humanoid.html"');
 await writeFile(path.join(DIST, "index.html"), out);
-const human = path.join(DIST, "web", "humanoid.html");
-const humanHtml = await readFile(human, "utf8");
-if (!humanHtml.includes('href="index.html"')) throw new Error("web/humanoid.html 找不到回首頁連結, 請同步更新 scripts/build.mjs");
-await writeFile(human, humanHtml.replace('href="index.html"', 'href="../index.html"'));
 
 // GitHub Pages 預設會用 Jekyll 處理檔案, 這個空檔讓它原樣提供
 await writeFile(path.join(DIST, ".nojekyll"), "");

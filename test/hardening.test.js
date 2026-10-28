@@ -53,7 +53,7 @@ test("本機伺服器擋掉路徑穿越與公開目錄以外的檔案", async ()
   const { server, port } = await startServer(0);
   const get = (path) => new Promise((resolve) => http.get({ host: "127.0.0.1", port, path }, (res) => { res.resume(); resolve(res.statusCode); }));
   try {
-    assert.equal(await get("/web/humanoid.html"), 200);
+    assert.equal(await get("/web/index.html"), 200);
     assert.equal(await get("/package.json"), 404);
     assert.equal(await get("/web/../package.json"), 404);
     assert.equal(await get("/web/%2e%2e/package.json"), 404);
@@ -67,20 +67,34 @@ test("本機伺服器擋掉路徑穿越與公開目錄以外的檔案", async ()
 // ---------- 人形文件 / skill ----------
 const humanDocs = ["docs/humanoid-prompt.md", "docs/humanoid-prompt.en.md"];
 
-test("人形規格文件裡的 JSON 範例都通過 validateHuman", async () => {
+test("人形規格文件裡的 JSON 範例通過 validateHuman, 且和 examples/humanoid/blue_worker.json 一致", async () => {
+  const example = JSON.parse(await read("examples/humanoid/blue_worker.json"));
   for (const f of humanDocs) {
     const text = await read(f);
     const blocks = [...text.matchAll(/```[a-z]*\n(\{[\s\S]*?\})\n```/g)].map((m) => m[1]);
-    assert.ok(blocks.length >= 2, `${f} 應該至少有 2 個 JSON 範例`);
-    for (const b of blocks) assert.deepEqual(validateHuman(JSON.parse(b)), [], `${f}: ${b}`);
+    assert.ok(blocks.length >= 1, `${f} 應該至少有 1 個 JSON 範例`);
+    for (const b of blocks) assert.deepEqual(validateHuman(JSON.parse(b)), [], `${f}: ${b.slice(0, 60)}`);
+    assert.deepEqual(JSON.parse(blocks.at(-1)), example, `${f} 的範例和 blue_worker.json 不同步, 請重新產生文件`);
   }
 });
 
-test("人形規格文件的欄位表中英一致, 且涵蓋全部欄位", async () => {
-  const fields = async (f) => [...(await read(f)).matchAll(/^\| `(\w+)` \|/gm)].map((m) => m[1]);
-  const [zh, en] = await Promise.all(humanDocs.map(fields));
+// 頂層欄位表 (`## 頂層結構` / `## Top level` 底下那張) 的欄位名稱
+const topFields = (text) => {
+  const section = text.split(/^## (?:頂層結構|Top level)$/m)[1].split(/^## /m)[0];
+  return [...section.matchAll(/^\| `(\w+)` \|/gm)].map((m) => m[1]);
+};
+
+test("人形規格文件的欄位表中英一致, 且涵蓋全部頂層欄位", async () => {
+  const [zh, en] = await Promise.all(humanDocs.map(async (f) => topFields(await read(f))));
   assert.deepEqual(zh, en);
-  assert.deepEqual([...zh].sort(), ["hair", "hairStyle", "name", "pants", "shade", "shoe", "skin", "top", "version"]);
+  assert.deepEqual([...zh].sort(), ["name", "palette", "parts", "shade", "version"]);
+});
+
+test("人形規格文件中英的部位表一致 (四個部位各自的列)", async () => {
+  const rows = async (f) => [...(await read(f)).matchAll(/^\| `(leg|arm|torso|head)` /gm)].map((m) => m[1]);
+  const [zh, en] = await Promise.all(humanDocs.map(rows));
+  assert.deepEqual(zh, ["leg", "arm", "torso", "head"]);
+  assert.deepEqual(en, zh);
 });
 
 test("skills/handdrawn-humanoid/SKILL.md 與 docs/humanoid-prompt.md 同步 (不同步請執行 npm run skill)", async () => {
@@ -91,23 +105,4 @@ test("skills/handdrawn-humanoid/SKILL.md 與 docs/humanoid-prompt.md 同步 (不
 test(".gitattributes 固定使用 LF 換行 (在 Windows 與 macOS 之間切換時檔案不會被改動)", async () => {
   const attrs = await read(".gitattributes");
   assert.match(attrs, /^\* text=auto eol=lf$/m);
-});
-
-test("人形頁用到的介面 key 都有翻譯, 且 STORE_KEYS 包含人形的儲存鍵", async () => {
-  const { default: zh } = await import("../web/i18n/zh-TW.js");
-  const { default: en } = await import("../web/i18n/en.js");
-  const html = await read("web/humanoid.html");
-  const js = (await read("web/humanoid.js")) + (await read("web/common.js"));
-  const used = new Set([
-    ...[...html.matchAll(/data-i18n(?:-html)?="([^"]+)"/g)].map((m) => m[1]),
-    ...[...html.matchAll(/data-i18n-attr="([^"]+)"/g)].flatMap((m) => m[1].split(";").map((p) => p.split(":")[1].trim())),
-    ...[...js.matchAll(/\bt\("([^"]+)"/g)].map((m) => m[1]),
-  ]);
-  for (const key of used) {
-    assert.ok(key in zh, `zh-TW 缺少 ${key}`);
-    assert.ok(key in en, `en 缺少 ${key}`);
-  }
-  const { STORE_KEYS } = await import("../web/common.js").catch(() => ({ STORE_KEYS: null }));
-  const keys = STORE_KEYS ?? [...(await read("web/common.js")).matchAll(/"(studio\.\w+)"/g)].map((m) => m[1]);
-  for (const k of [...(await read("web/humanoid.js")).matchAll(/"(studio\.\w+)"/g)].map((m) => m[1])) assert.ok(keys.includes(k), `STORE_KEYS 缺少 ${k}`);
 });

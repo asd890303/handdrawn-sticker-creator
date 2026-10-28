@@ -36,7 +36,7 @@ export const HUMAN_SKILL_PATH = path.join(ROOT, "skills", "handdrawn-humanoid", 
 
 const HUMAN_FRONTMATTER = `---
 name: handdrawn-humanoid
-description: 產生手繪風人形角色 (正面 / 背面 / 側面 × 走路 / 受傷 / 衝刺) 所需的角色 JSON。使用者想畫人物的逐幀圖、人形精靈圖，或提到 Handdrawn Sticker Creator 的人形繪圖時使用。只決定顏色與髮型，骨架與動作由工具固定處理。
+description: 產生手繪風人形角色 (正面 / 背面 / 側面的走路) 所需的部位圖形 JSON。使用者想畫人物的逐幀圖、人形精靈圖，或提到 Handdrawn Sticker Creator 的人形繪圖時使用。為腿、手臂、身體、頭各寫一組貼紙圖形，骨架與動作由工具固定處理。
 ---
 
 `;
@@ -45,7 +45,7 @@ const HUMAN_AGENT_NOTES = `## 在 coding agent 裡執行的額外規定
 
 - STEP 1 直接在對話中詢問使用者，等他回答再繼續。
 - STEP 3 除了在回覆中輸出 JSON，也把同一份 JSON 存成目前目錄下的 \`<name>.json\` (\`name\` 就是 JSON 的 \`name\` 欄位)，並告訴使用者檔案路徑。
-- 存檔後提醒使用者：到 https://asd890303.github.io/handdrawn-sticker-creator/web/humanoid.html 把 JSON 貼進「角色規格」，再按「下載圖集 PNG」。
+- 存檔後提醒使用者：到 https://asd890303.github.io/handdrawn-sticker-creator/ ，左上角切到「人形」，按「新增」，把 JSON 貼進編輯區，再按「下載 PNG」。
 - 以下規格中「不要其他說明文字」的限制，只針對貼進 JSON 的那一則回覆內容；存檔路徑與使用提醒可以另外在 JSON 之後簡短補上。
 
 `;
