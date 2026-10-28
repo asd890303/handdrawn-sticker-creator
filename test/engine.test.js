@@ -103,5 +103,5 @@ test("介面語系: 各語系 key 一致, 介面用到的 key 都有翻譯", asy
 test("skills/handdrawn-sticker-creator/SKILL.md 與 docs/ai-prompt.md 同步 (不同步請執行 npm run skill)", async () => {
   const { readFile } = await import("node:fs/promises");
   const { buildSkill, SKILL_PATH } = await import("../scripts/sync-skill.mjs");
-  assert.equal(await readFile(SKILL_PATH, "utf8"), await buildSkill());
+  assert.equal((await readFile(SKILL_PATH, "utf8")).replace(/\r\n/g, "\n"), await buildSkill());
 });
