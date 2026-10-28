@@ -40,16 +40,25 @@ PNG
 
 ## 人形繪圖 (Beta)
 
-`src/humanoid.js` 把一份很短的角色規格 (顏色、髮型、`shade`) 變成一整套逐幀圖。骨架與姿勢數學都寫在這個檔案裡，它產出一般貼紙規格的圖形清單 (`poly`、`line`、`dot`、`group`)，再交給同一個 `renderSvg` 畫。抖動外框、偏移填色、白色描邊因此和貼紙共用同一套。
+`src/humanoid.js` 把一份「部位圖形」JSON 變成一整套逐幀圖。JSON 為 `leg`、`arm`、`torso`、`head` 各寫 `front`、`back`、`side` 三組貼紙圖形。骨架和動作寫在這個檔案裡，它把部位擺成貼紙規格的圖形清單 (`group` 加上位移、旋轉、縮放)，再交給同一個 `renderSvg` 畫。抖動外框、偏移填色、白色描邊因此和貼紙共用同一套。
 
-- **一致風格**：同一個角色的同一個視角固定用 `<name>_<view>` 當亂數種子，每格抖動相同，畫面不會閃。人形規格只有顏色和列舉值，沒有圖形欄位，不同角色放在一起風格一致。
-- **圖集格式**：36 格，768×768，每格 128、6 欄。順序是走路 0-17、受傷 18-23、衝刺 24-35，每個動作內依正面、背面、側面排列。向左用向右翻轉。常數在 `SHEET`、`ACTIONS`、`FRAMES`。
-- **陰影**：`shade` 預設 `true`，陰影畫在人物裡面，外面仍是透明；貼紙的 `canvas.shade` 預設關閉。陰影遮罩套在整個人物外層，走路起伏、受傷和衝刺變形時遮罩位置固定，不跟著身體移動。
-- **沒有**：死亡動作、配件 (帽子、背包、圍裙)、腳底光暈。
-- **驗證**：`validateHuman` 與貼紙共用 `HEX`、`NAME` 規則。顏色只收 hex，`hairStyle` 只收列舉值，`shade` 只收布林，未知欄位算錯誤。
-- **新增動作**：改 `ACTIONS` / `FPS`、`frameShapes` 的姿勢表、網頁的動作單選鈕與兩份 i18n、兩份 `docs/humanoid-prompt*.md`；測試的格數是從 `ACTIONS` 推算的。
-- **給 AI 的文件**：`docs/humanoid-prompt.md` (及 `.en.md`)。`npm run skill` 從它產生 skill 版 (`skills/handdrawn-humanoid/SKILL.md`)，測試檢查兩者同步，也檢查範例 JSON 通過驗證。
-- **儲存**：角色規格存在 localStorage 的 `studio.human`，列在 `web/common.js` 的 `STORE_KEYS`。頁面底下有「資料儲存」聲明和重設按鈕。
+- **骨架**：正面和背面只畫左腿、左手，右邊用 `sx: -1` 鏡像。側面畫一條腿和一隻手，工具畫成前後兩條腿，依腳尖位置換算成以髖為軸的擺動角度。座標約定 (腳底 `y = 53`、髖 `y = 12`、肩 `y = -22`) 寫在 `docs/humanoid-prompt.md`。
+- **動作**：只有走路，每個視角 6 格，相位用連續的三角函數計算 (`phase()`)，整個人物隨步伐上下起伏。
+- **省字寫法**：AI 的回覆長度就是使用者的 token 花費，所以輸入格式有三個省字做法。測試逐格比對，結果和完整寫法相同。
+  1. `leg`、`arm`、`torso` 的 `back` 省略時沿用 `front`。`head.back` 沒有臉，要寫。
+  2. 人形裡 `poly` 的 `box` 預設 `false`，`dot` 的 `sw` 預設 `0`，`line` 的 `amp` 預設 `0.6`。
+  3. `poly`、`ell`、`line`、`dot` 可以寫成陣列簡寫，簽名在 `SHORT_SIGNATURE`。
+
+  `normalizeShape` 把簡寫展開成完整寫法，再交給貼紙驗證。安全規則不變，錯誤路徑仍是 `parts.leg.front[0].fill` 這種形式。
+- **回覆格式驗證**：`humanWarnings` 回傳不擋下的提醒 (`back` 和 `front` 相同可以省略、壓縮後超過 `SIZE_HINT` 字元)，顯示在狀態列。貼上時，`extractJson` (`src/extract.js`) 去掉 AI 回覆中 JSON 前後的說明文字和程式碼框，貼紙和人形都適用。規格文件要求 AI 輸出單行壓縮的 JSON，3000 字元以內。
+- **一致風格**：同一個角色的同一個視角固定用 `<name>_<view>` 當亂數種子，每格抖動相同，畫面不會閃。所有角色共用一副骨架和一套線寬、抖動設定。
+- **圖集格式**：18 格，768×384，每格 128、6 欄 3 列。順序是正面 0-5、背面 6-11、側面 12-17。向左用向右翻轉。常數在 `SHEET`、`ACTIONS`、`FRAMES`。`renderSheet` 把 18 格組成一張 SVG，預覽、複製 SVG、下載 PNG 都用它。
+- **陰影**：`shade` 預設 `true`，陰影畫在人物裡面，外面仍是透明；貼紙的 `canvas.shade` 預設關閉。陰影遮罩套在整個人物外層，走路起伏時遮罩位置固定，不跟著身體移動。
+- **沒有**：受傷、衝刺、死亡動作，配件 (帽子、背包、圍裙)，腳底光暈。
+- **驗證**：`validateHuman` 檢查頂層欄位，部位的每組圖形 (展開簡寫、補上預設值之後) 借用 `validateSpec` 檢查，錯誤路徑改寫成 `parts.leg.front[0].fill` 這種形式。因此貼紙的安全規則 (顏色白名單、座標與數量上限、`Object.hasOwn`) 對人形同樣有效。
+- **新增動作**：改 `ACTIONS`、`frameShapes` 的姿勢、`SHEET` 的列數與尺寸、兩份 `docs/humanoid-prompt*.md`；測試的格數是從 `ACTIONS` 推算的。
+- **給 AI 的文件**：`docs/humanoid-prompt.md` (及 `.en.md`)，文件最後的範例就是 `examples/humanoid/blue_worker.json`。`npm run skill` 從文件產生 skill 版 (`skills/handdrawn-humanoid/SKILL.md`)，測試檢查兩者同步，也檢查文件範例通過驗證且與範例檔一致。
+- **儲存**：人形角色和貼紙存在同一份列表 (`studio.items`，人形項目帶 `kind: "human"`)。`studio.mode` 記住上次的模式，`studio.humanSeeded` 記錄範例角色是否已放入，兩者都列在 `web/common.js` 的 `STORE_KEYS`。
 
 ## 安全設計
 

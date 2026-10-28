@@ -1,177 +1,25 @@
-// 人形繪圖 (Beta): 一份角色規格 → 正面 / 背面 / 側面 × 走路 / 受傷 / 衝刺 的逐幀圖。
-// 人體骨架與姿勢都寫在這個檔案裡, 輸出的是貼紙工具既有的 shapes 清單, 再交給 renderSvg 畫,
-// 所以抖動外框、偏移填色、白色貼紙描邊都和一般貼紙同一套, 同一個角色每格風格一致。
-// 不做死亡動作、不做配件 (帽子 / 背包 / 圍裙等) 與腳底光暈。
+// 人形繪圖 (Beta): 一份「部位圖形」JSON → 正面 / 背面 / 側面的走路逐幀圖。
+// JSON 為 腿 / 手臂 / 身體 / 頭 各寫一組貼紙圖形 (rect、poly、ell、line、tube、dot、group、repeat, 和貼紙同一套);
+// 工具固定處理骨架: 左右鏡像、關節擺動、走路起伏, 再交給 renderSvg 畫出抖動外框與白色描邊。
+// 不做受傷、衝刺、死亡動作、配件與腳底光暈。
+//
+// 為了讓 AI 的回覆短一點 (回覆越長, 使用者花的 token 越多), 輸入格式有三個省字的做法, 結果和完整寫法完全相同:
+//   1. 腿 / 手臂 / 身體 的 back 可以省略, 沿用 front (頭的 back 沒有臉, 一定要自己寫)
+//   2. 人形裡的預設值: poly 的 box 預設 false、dot 的 sw 預設 0、line 的 amp 預設 0.6
+//   3. 常用圖形可以用陣列簡寫: ["poly", fill, pts, w?]、["ell", fill, cx, cy, rx, ry, w?]、["line", pts, w?, col?]、["dot", fill, x, y, r]
 import { renderSvg } from "./render.js";
-import { HEX, NAME } from "./spec.js";
+import { NAME, validateSpec } from "./spec.js";
 
 export const VIEWS = ["front", "back", "side"];
-export const ACTIONS = { walk: 6, hurt: 2, dash: 4 };
-export const FPS = { walk: 12, hurt: 4, dash: 6 };   // 預覽動畫的播放速度 (每秒幾格)
-export const HAIR_STYLES = ["short", "swoop", "none"];
-// 圖集: 每格 128, 6 欄, 共 36 格 → 768×768
-export const SHEET = { cell: 128, cols: 6, size: 768 };
+export const PARTS = ["leg", "arm", "torso", "head"];
+export const ACTIONS = { walk: 6 };
+// 圖集: 每格 128, 6 欄, 3 列 (正面 / 背面 / 側面各一列), 共 18 格 → 768×384
+export const SHEET = { cell: 128, cols: 6, rows: 3, width: 768, height: 384 };
+// JSON 壓縮後超過這個字元數就提醒 (基本人形約 2 千字元, 文件要求 AI 控制在 3000 以內)
+export const SIZE_HINT = 4000;
 
-const KEYS = ["version", "name", "skin", "top", "pants", "hair", "shoe", "hairStyle", "shade"];
-const DEFAULTS = { skin: "#ffd2a6", top: "#8ec9ff", pants: "#2f5fcf", hair: "#2a2a2a", shoe: "#4a2c14", hairStyle: "short" };
-
-export function validateHuman(spec) {
-  const errs = [];
-  if (!spec || typeof spec !== "object" || Array.isArray(spec)) return ["根節點必須是物件"];
-  if (spec.version !== 1) errs.push("version: 必須是 1");
-  if (typeof spec.name !== "string" || !NAME.test(spec.name)) errs.push("name: 必填, 1~64 字元, 不可含 < > \" & ' \\");
-  for (const k of ["skin", "top", "pants", "hair", "shoe"]) {
-    if (spec[k] !== undefined && (typeof spec[k] !== "string" || !HEX.test(spec[k]))) errs.push(`${k}: 需為 #rrggbb`);
-  }
-  if (spec.shade !== undefined && typeof spec.shade !== "boolean") errs.push("shade: 需為 true 或 false");
-  if (spec.hairStyle !== undefined && !HAIR_STYLES.includes(spec.hairStyle)) errs.push(`hairStyle: 只能是 ${HAIR_STYLES.join(" / ")}`);
-  for (const k of Object.keys(spec)) if (!KEYS.includes(k)) errs.push(`${k}: 未知的欄位`);
-  return errs;
-}
-
-// ---------- 圖形原語 (輸出貼紙規格的 shape) ----------
-const PEN = "#111";
-const poly = (pts, fill, w) => ({ t: "poly", pts, fill, box: false, ...(w ? { w } : {}) });
-const mirror = (pts) => pts.map(([x, y]) => [-x, y]);
-const raiseFoot = (pts, d) => pts.map(([x, y]) => [x, y > 20 ? y - d : y]);
-const ELL_N = 10;
-const oval = (cx, cy, rx, ry, fill, w) =>
-  poly(Array.from({ length: ELL_N }, (_, i) => [cx + rx * Math.cos((2 * Math.PI * i) / ELL_N), cy + ry * Math.sin((2 * Math.PI * i) / ELL_N)]), fill, w);
-const stroke = (pts, w = 2.8, col = PEN) => ({ t: "line", pts, w, col, amp: 0.6 });
-// 實心小橢圓 (眼睛): 疊兩個圓, 不經過抖動
-const solidOval = (x, y, rx, ry) => [{ t: "dot", x, y: y - (ry - rx) / 2, r: rx, fill: PEN, sw: 0 }, { t: "dot", x, y: y + (ry - rx) / 2, r: rx, fill: PEN, sw: 0 }];
-
-// ---------- 走路相位 ----------
-// 相位連續計算 (4 格時經過格兩張一樣, 左右走看起來會卡)
-function phase(th, stride = 1) {
-  const c = Math.cos(th), s = Math.sin(th);
-  return {
-    sa: 3 + 10 * stride * c, sb: 3 - 10 * stride * c,   // 側面: 兩腳的腳尖 x
-    la: Math.max(0, -s) * 5, lb: Math.max(0, s) * 5,    // 往前擺的那隻腳抬高
-    arm: -6 * stride * c,                               // 手臂和腳反向擺
-    bl: Math.max(0, s) * 5, br: Math.max(0, -s) * 5,    // 正面 / 背面: 左右腳輪流抬
-    bob: -2 * Math.abs(s),
-  };
-}
-
-function eyes(x, face, y = -40) {
-  if (face === "hurt") {   // 痛到瞇眼 > <
-    const d = x < 0 ? 1 : -1;
-    return [stroke([[x - 3 * d, y - 3], [x + 2 * d, y], [x - 3 * d, y + 3]], 2.2)];
-  }
-  return solidOval(x, y, 2.2, 3.2);
-}
-
-function hairShape(style, view, col) {
-  if (style === "none") return [];
-  if (view === "back") return [poly([[-17, -46], [-16, -58], [0, -63], [16, -58], [17, -46], [13, -30], [0, -27], [-13, -30]], col)];
-  if (view === "side") return [poly([[-16, -40], [-15, -55], [2, -61], [14, -54], [6, -50], [-2, -46], [-6, -36]], col)];
-  if (style === "swoop") return [poly([[-17, -42], [-16, -56], [0, -62], [16, -56], [17, -44], [8, -52], [-6, -50]], col)];
-  return [poly([[-16, -42], [-16, -52], [0, -55], [16, -52], [16, -42], [8, -48], [-2, -46], [-10, -48]], col)];
-}
-
-function sideLeg(hx, fx, raised, pants, shoe) {
-  const m = (hx + fx) / 2;
-  return [
-    poly([[hx - 6, 12], [hx + 5, 12], [m + 4, 30], [fx + 4, 48 - raised], [fx - 4, 48 - raised], [m - 5, 30]], pants),
-    poly([[fx - 7, 47 - raised], [fx + 6, 46 - raised], [fx + 9, 53 - raised], [fx - 7, 53 - raised]], shoe),
-  ];
-}
-
-// 一個姿勢的完整人形 (腳底在 y = 53)
-function figure(col, view, { face = "normal", stride = 1, th = 0, arm } = {}) {
-  const pose = phase(th, stride);
-  if (arm !== undefined) pose.arm = arm;
-  const s = [];
-  if (view === "side") {
-    s.push(...sideLeg(-1, pose.sb, pose.lb, col.pants, col.shoe), ...sideLeg(3, pose.sa, pose.la, col.pants, col.shoe));
-    s.push(poly([[-9, -24], [6, -24], [12, -14], [11, 2], [9, 15], [-8, 15], [-11, 0], [-11, -16]], col.top));
-    const hx = 4 + pose.arm;   // 手臂垂在身側 (畫在身體上面)
-    s.push(poly([[-4, -21], [4, -21], [hx / 2 + 4, -4], [hx + 3, 8], [hx - 3, 9], [hx / 2 - 2, -4]], col.top), oval(hx, 12, 4.5, 4.5, col.skin, 2.5));
-    s.push(poly([[-4, -28], [4, -28], [4, -22], [-4, -22]], col.skin));
-    s.push(poly([[-16, -42], [-14, -54], [0, -59], [14, -52], [18, -42], [21, -38], [17, -35], [14, -28], [2, -24], [-10, -28]], col.skin));
-    s.push(...hairShape(col.hairStyle, view, col.hair));
-    if (face === "normal") s.push(...solidOval(9, -41, 2, 3), stroke([[6, -31], [11, -31]], 2));
-    else s.push(...eyes(9, face, -41), oval(9, -31, 2.2, 1.8, "#7a1a1a", 2));
-    return s;
-  }
-  // 正面 / 背面
-  const leg = [[-15, 12], [-1, 12], [-3, 30], [-4, 48], [-13, 48], [-14, 30]];
-  const shoeL = [[-15, 47], [-3, 47], [-2, 54], [-17, 54]];
-  s.push(poly(raiseFoot(leg, pose.bl), col.pants), poly(mirror(raiseFoot(leg, pose.br)), col.pants));
-  s.push(poly(raiseFoot(shoeL, pose.bl), col.shoe), poly(mirror(raiseFoot(shoeL, pose.br)), col.shoe));
-  const armPts = [[-17, -22], [-24, -16], [-27, 0], [-27, 8], [-21, 8], [-20, -6]];
-  const al = pose.arm / 2, ar = -pose.arm / 2;   // 背面手臂前後擺 = 手往上縮一點
-  s.push(poly(raiseFoot(armPts, Math.abs(al)), col.top), poly(mirror(raiseFoot(armPts, Math.abs(ar))), col.top));
-  s.push(oval(-24, 12 - Math.abs(al), 4.5, 4.5, col.skin, 2.5), oval(24, 12 - Math.abs(ar), 4.5, 4.5, col.skin, 2.5));
-  s.push(poly([[-9, -25], [9, -25], [19, -21], [17, -4], [15, 15], [-15, 15], [-17, -4], [-19, -21]], col.top));   // 肩寬腰窄
-  s.push(poly([[-4, -29], [4, -29], [4, -23], [-4, -23]], col.skin));
-  s.push(poly([[-17, -42], [-15, -54], [0, -59], [15, -54], [17, -42], [14, -32], [6, -26], [-6, -26], [-14, -32]], col.skin));   // 下巴收窄
-  if (view === "front") {
-    s.push(oval(-17, -40, 2.5, 4, col.skin, 2), oval(17, -40, 2.5, 4, col.skin, 2));
-    s.push(...hairShape(col.hairStyle, view, col.hair));
-    s.push(...eyes(-6, face), ...eyes(6, face));
-    s.push({ t: "dot", x: -11, y: -34, r: 2.6, fill: "#ffa59a", sw: 0 }, { t: "dot", x: 11, y: -34, r: 2.6, fill: "#ffa59a", sw: 0 });
-    s.push(face === "normal" ? stroke([[-4, -31], [0, -29], [4, -31]], 2) : oval(0, -30, 2.5, 2, "#7a1a1a", 2));
-  } else {
-    s.push(...hairShape(col.hairStyle, view, col.hair));
-  }
-  return s;
-}
-
-// ---------- 動作 ----------
-const FOOT = 53;
-// 受傷 2 格: [後仰角度, 水平位移]; 衝刺 4 格 (蓄力 / 衝出 / 滑行 / 收步):
-// 側面 [前傾角度, 垂直縮放, 步幅, 手臂擺幅], 正面背面 [水平縮放, 垂直縮放, 走路相位]
-const HURT_POSES = [[-10, -4], [-4, -1]];
-const DASH_SIDE = [[-6, 0.9, 0.5, 6], [18, 1.04, 1.8, -12], [24, 1.02, 2.0, -14], [8, 0.97, 1.2, -6]];
-const DASH_FRONT = [[1.08, 0.88, 0], [0.92, 1.1, Math.PI / 2], [0.94, 1.07, Math.PI / 2], [1.03, 0.96, 0]];
-const grp = (children, transform) => ({ t: "group", transform, children });
-
-// 回傳 action 的第 i 格 (shape 清單)。受傷: 往後仰 (側面) 或壓扁 (正面背面) + 瞇眼; 衝刺: 蓄力 → 衝出 → 滑行 → 收步
-function frameShapes(col, view, action, i) {
-  if (action === "walk") {
-    const th = (2 * Math.PI * i) / ACTIONS.walk;
-    return [grp(figure(col, view, { th }), { ty: +phase(th).bob.toFixed(2) })];
-  }
-  if (action === "hurt") {
-    const [a, dx] = HURT_POSES[i];
-    const f = figure(col, view, { face: "hurt" });
-    if (view === "side") return [grp(f, { tx: dx, rot: a, px: 0, py: FOOT })];
-    const sy = 1 + a / 100;
-    return [grp(f, { sx: 2 - sy, sy, px: 0, py: FOOT })];
-  }
-  if (view === "side") {
-    const [lean, sy, stride, arm] = DASH_SIDE[i];
-    return [grp([grp(figure(col, view, { stride, th: 0, arm }), { sy, px: 0, py: FOOT })], { rot: lean, px: 0, py: FOOT })];
-  }
-  const [sx, sy, th] = DASH_FRONT[i];
-  return [grp(figure(col, view, { th }), { sx, sy, px: 0, py: FOOT })];
-}
-
-// 圖集順序: 走路 0-17 / 受傷 18-23 / 衝刺 24-35, 每個動作內依 正面 / 背面 / 側面 排列
-export const FRAMES = Object.entries(ACTIONS).flatMap(([action, n]) =>
-  VIEWS.flatMap((view) => Array.from({ length: n }, (_, i) => ({ action, view, i }))),
-);
-
-const STYLE = { amp: 1.8, off: [2.2, 1.6], w: 3.6, pen: PEN };
-
-// 單格 SVG。同一個角色同一個視角固定用同一個名字當亂數種子, 所以每格抖動一致、不會閃
-export function renderFrame(spec, view, action, i, { seed = 0, id = "" } = {}) {
-  const errors = validateHuman(spec);
-  if (errors.length) throw new HumanError(errors);
-  const col = { ...DEFAULTS, ...spec };
-  return renderSvg(
-    {
-      version: 1,
-      name: `${spec.name}_${view}`,
-      canvas: { w: SHEET.cell, h: SHEET.cell, scale: 0.82, foot: FOOT, baseY: 116.5, rim: true, shade: spec.shade ?? true },
-      style: STYLE,
-      shapes: frameShapes(col, view, action, i),
-    },
-    { seed, id },
-  );
-}
+const KEYS = ["version", "name", "palette", "shade", "parts"];
+const BACK_FROM_FRONT = ["leg", "arm", "torso"];
 
 export class HumanError extends Error {
   constructor(errors) {
@@ -180,7 +28,194 @@ export class HumanError extends Error {
   }
 }
 
-// 全部 36 格 [{ action, view, i, svg }]
+// ---------- 省字: 預設值與陣列簡寫 ----------
+const DEFAULTS = { poly: { box: false }, dot: { sw: 0 }, line: { amp: 0.6 } };
+// 簡寫: 陣列第一個元素是種類, 後面依序是欄位值 (req 個必填, 其餘可省略)
+const SHORT = {
+  poly: { args: ["fill", "pts", "w"], req: 2 },
+  ell: { args: ["fill", "cx", "cy", "rx", "ry", "w"], req: 5 },
+  line: { args: ["pts", "w", "col"], req: 1 },
+  dot: { args: ["fill", "x", "y", "r"], req: 4 },
+};
+const SHORT_SIGNATURE = {
+  poly: '["poly", fill, pts, w?]',
+  ell: '["ell", fill, cx, cy, rx, ry, w?]',
+  line: '["line", pts, w?, col?]',
+  dot: '["dot", fill, x, y, r]',
+};
+// 簡寫寫錯時佔位用的合法圖形, 讓後面圖形的索引不位移 (錯誤已經另外記下)
+const PLACEHOLDER = { t: "dot", x: 0, y: 0, r: 1, fill: "none" };
+
+const isObj = (x) => !!x && typeof x === "object" && !Array.isArray(x);
+
+// 把一個圖形整理成完整寫法: 展開簡寫、補上人形預設值; 群組與重複的 children 也一併處理
+function normalizeShape(shape, path, errs) {
+  let s = shape;
+  if (Array.isArray(shape)) {
+    const tag = shape[0];
+    if (typeof tag !== "string" || !Object.hasOwn(SHORT, tag)) {
+      errs.push(`${path}: 簡寫的第一個元素必須是 ${Object.keys(SHORT).join(" / ")}`);
+      return PLACEHOLDER;
+    }
+    const def = SHORT[tag], vals = shape.slice(1);
+    if (vals.length < def.req || vals.length > def.args.length) {
+      errs.push(`${path}: 簡寫格式是 ${SHORT_SIGNATURE[tag]}`);
+      return PLACEHOLDER;
+    }
+    s = { t: tag };
+    def.args.forEach((k, i) => { if (vals[i] !== undefined) s[k] = vals[i]; });
+  }
+  if (!isObj(s)) return s;   // 交給貼紙驗證回報
+  const out = typeof s.t === "string" && Object.hasOwn(DEFAULTS, s.t) ? { ...DEFAULTS[s.t], ...s } : { ...s };
+  if (Array.isArray(out.children)) out.children = out.children.map((c, i) => normalizeShape(c, `${path}.children[${i}]`, errs));
+  return out;
+}
+
+// 驗證一組圖形 (貼紙規格的驗證), 錯誤路徑從 shapes[...] 改寫成 parts.<部位>.<視角>[...]; 回傳整理後的圖形
+function checkShapes(path, shapes, palette, errs, missing) {
+  if (shapes === undefined) { errs.push(`${path}: ${missing}`); return undefined; }
+  if (!Array.isArray(shapes) || !shapes.length) { errs.push(`${path}: 需為至少一個圖形的陣列`); return undefined; }
+  const list = shapes.map((s, i) => normalizeShape(s, `${path}[${i}]`, errs));
+  const probe = { version: 1, name: "probe", canvas: { w: SHEET.cell, h: SHEET.cell }, palette, shapes: list };
+  for (const e of validateSpec(probe)) if (e.startsWith("shapes")) errs.push(path + e.slice("shapes".length));
+  return list;
+}
+
+// 驗證並整理: 回傳 { errors, parts } (parts 是補完 back、展開簡寫、補上預設值的完整寫法)
+function prepare(spec) {
+  const errs = [];
+  if (!isObj(spec)) return { errors: ["根節點必須是物件"] };
+  if (spec.version !== 1) errs.push("version: 必須是 1");
+  if (typeof spec.name !== "string" || !NAME.test(spec.name)) errs.push("name: 必填, 1~64 字元, 不可含 < > \" & ' \\");
+  if (spec.shade !== undefined && typeof spec.shade !== "boolean") errs.push("shade: 需為 true 或 false");
+  for (const k of Object.keys(spec)) if (!KEYS.includes(k)) errs.push(`${k}: 未知的欄位`);
+
+  const palette = spec.palette ?? {};
+  // 調色盤只檢查一次 (用空的圖形清單借貼紙的驗證)
+  for (const e of validateSpec({ version: 1, name: "probe", canvas: { w: SHEET.cell, h: SHEET.cell }, palette, shapes: [] })) if (e.startsWith("palette")) errs.push(e);
+
+  const raw = spec.parts;
+  if (!isObj(raw)) return { errors: [...errs, "parts: 必填, 需為物件"] };
+  for (const k of Object.keys(raw)) if (!PARTS.includes(k)) errs.push(`parts.${k}: 未知的部位 (只有 ${PARTS.join(" / ")})`);
+  const parts = {};
+  for (const part of PARTS) {
+    const p = raw[part];
+    if (!isObj(p)) { errs.push(`parts.${part}: 必填, 需為物件`); continue; }
+    for (const k of Object.keys(p)) if (!VIEWS.includes(k)) errs.push(`parts.${part}.${k}: 未知的欄位`);
+    parts[part] = {};
+    for (const view of VIEWS) {
+      const fallback = view === "back" && BACK_FROM_FRONT.includes(part);   // 沒寫 back 就沿用 front
+      const missing = view === "back" && part === "head" ? "必填 (背面沒有臉, 要自己寫一組只有頭和頭髮的)" : "必填, 需為圖形陣列";
+      parts[part][view] = checkShapes(`parts.${part}.${view}`, fallback && p.back === undefined ? p.front : p[view], palette, errs, missing);
+    }
+  }
+  return { errors: errs, parts };
+}
+
+export const validateHuman = (spec) => prepare(spec).errors;
+
+// 不影響畫圖、但會讓 AI 回覆變長的寫法; 回傳提醒文字陣列 (不擋下)
+export function humanWarnings(spec) {
+  const out = [];
+  if (!isObj(spec) || !isObj(spec.parts)) return out;
+  for (const part of BACK_FROM_FRONT) {
+    const p = spec.parts[part];
+    if (isObj(p) && p.back !== undefined && JSON.stringify(p.back) === JSON.stringify(p.front)) out.push(`parts.${part}.back 和 front 相同, 可以省略`);
+  }
+  const n = JSON.stringify(spec).length;
+  if (n > SIZE_HINT) out.push(`JSON 偏長 (${n} 字元, 基本人形約 2000): 用陣列簡寫、省略 back 可以縮短`);
+  return out;
+}
+
+// ---------- 骨架與走路 ----------
+const FOOT = 53;      // 腳底 y
+const LEG_LEN = 36;   // 側面腿: 髖 (y=12) 到腳 (y=48) 的長度, 用來把腳的前後位置換成擺動角度
+const ARM_LEN = 33;   // 側面手臂: 肩 (y=-21) 到手 (y=12)
+
+// 相位連續計算 (4 格時經過格兩張一樣, 左右走看起來會卡)
+function phase(th) {
+  const c = Math.cos(th), s = Math.sin(th);
+  return {
+    sa: 3 + 10 * c, sb: 3 - 10 * c,                     // 側面: 兩腳的腳尖 x
+    la: Math.max(0, -s) * 5, lb: Math.max(0, s) * 5,    // 往前擺的那隻腳抬高
+    arm: -6 * c,                                        // 手臂和腳反向擺
+    bl: Math.max(0, s) * 5, br: Math.max(0, -s) * 5,    // 正面 / 背面: 左右腳輪流抬
+    bob: -2 * Math.abs(s),
+  };
+}
+
+const grp = (children, transform) => ({ t: "group", transform, children });
+const deg = (rad) => +((rad * 180) / Math.PI).toFixed(2);
+const r2 = (n) => +n.toFixed(2);
+
+// 走路第 i 格 (shape 清單), 腳底在 y = 53
+function frameShapes(parts, view, i) {
+  const th = (2 * Math.PI * i) / ACTIONS.walk;
+  const G = phase(th);
+  let body;
+  if (view === "side") {
+    // 兩隻腳: 髖固定 (後腳 x=-1, 前腳 x=3), 依腳尖位置轉一個角度, 再抬高
+    const leg = (hx, fx, lift) => grp(parts.leg.side, { tx: hx - 1, ty: -r2(lift), rot: -deg(Math.atan2(fx - hx, LEG_LEN)), px: 1, py: 12 });
+    body = [
+      leg(-1, G.sb, G.lb), leg(3, G.sa, G.la),
+      ...parts.torso.side,
+      grp(parts.arm.side, { rot: -deg(Math.atan2(G.arm, ARM_LEN)), px: 0, py: -21 }),
+      ...parts.head.side,
+    ];
+  } else {
+    // 正面 / 背面: 右邊是左邊的鏡像; 抬腳 / 手臂前後擺 = 整個部位往上移一點 (身體畫在腿和手臂上面, 接縫看不到)
+    const al = Math.abs(G.arm / 2), ar = Math.abs(-G.arm / 2);
+    body = [
+      grp(parts.leg[view], { ty: -r2(G.bl) }), grp(parts.leg[view], { sx: -1, ty: -r2(G.br) }),
+      grp(parts.arm[view], { ty: -r2(al * 0.6) }), grp(parts.arm[view], { sx: -1, ty: -r2(ar * 0.6) }),
+      ...parts.torso[view],
+      ...parts.head[view],
+    ];
+  }
+  return [grp(body, { ty: r2(G.bob) })];
+}
+
+// 圖集順序: 正面 0-5 / 背面 6-11 / 側面 12-17 (每個視角 6 格走路)
+export const FRAMES = VIEWS.flatMap((view) => Array.from({ length: ACTIONS.walk }, (_, i) => ({ action: "walk", view, i })));
+
+const STYLE = { amp: 1.8, off: [2.2, 1.6], w: 3.6, pen: "#111" };
+
+function draw(spec, parts, view, i, seed, id) {
+  return renderSvg(
+    {
+      version: 1,
+      // 同一個角色同一個視角固定用同一個名字當亂數種子, 每格抖動一致、不會閃
+      name: `${spec.name}_${view}`,
+      canvas: { w: SHEET.cell, h: SHEET.cell, scale: 0.82, foot: FOOT, baseY: 116.5, rim: true, shade: spec.shade ?? true },
+      palette: spec.palette ?? {},
+      style: STYLE,
+      shapes: frameShapes(parts, view, i),
+    },
+    { seed, id },
+  );
+}
+
+function ready(spec) {
+  const { errors, parts } = prepare(spec);
+  if (errors.length) throw new HumanError(errors);
+  return parts;
+}
+
+// 單格 SVG
+export function renderFrame(spec, view, i, { seed = 0, id = "" } = {}) {
+  return draw(spec, ready(spec), view, i, seed, id);
+}
+
+// 全部 18 格 [{ action, view, i, svg }]
 export function renderAll(spec, { seed = 0, id = "" } = {}) {
-  return FRAMES.map((f, k) => ({ ...f, svg: renderFrame(spec, f.view, f.action, f.i, { seed, id: `${id}f${k}-` }).svg }));
+  const parts = ready(spec);
+  return FRAMES.map((f, k) => ({ ...f, svg: draw(spec, parts, f.view, f.i, seed, `${id}f${k}-`).svg }));
+}
+
+// 18 格排成一張 768×384 的 SVG (每格是一個內嵌的 <svg>), 預覽、複製 SVG、輸出 PNG 都用它; warnings 是不擋下的提醒
+export function renderSheet(spec, { seed = 0, id = "" } = {}) {
+  const frames = renderAll(spec, { seed, id });
+  const { cell, cols, width, height } = SHEET;
+  const body = frames.map((f, k) => f.svg.replace("<svg ", `<svg x="${(k % cols) * cell}" y="${Math.floor(k / cols) * cell}" `)).join("");
+  return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${body}</svg>`, width, height, frames, warnings: humanWarnings(spec) };
 }
