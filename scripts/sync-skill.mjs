@@ -5,6 +5,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// Windows 與 macOS 的換行不同 (CRLF / LF); 讀進來一律轉成 LF, 產出的 SKILL.md 才會在兩邊相同
+const lf = (s) => s.replace(/\r\n/g, "\n");
+
 export const SKILL_PATH = path.join(ROOT, "skills", "handdrawn-sticker-creator", "SKILL.md");
 
 const FRONTMATTER = `---
@@ -24,7 +27,7 @@ const AGENT_NOTES = `## 在 coding agent 裡執行的額外規定
 `;
 
 export async function buildSkill() {
-  const spec = await readFile(path.join(ROOT, "docs", "ai-prompt.md"), "utf8");
+  const spec = lf(await readFile(path.join(ROOT, "docs", "ai-prompt.md"), "utf8"));
   return FRONTMATTER + AGENT_NOTES + spec;
 }
 
@@ -48,7 +51,7 @@ const HUMAN_AGENT_NOTES = `## 在 coding agent 裡執行的額外規定
 `;
 
 export async function buildHumanSkill() {
-  const spec = await readFile(path.join(ROOT, "docs", "humanoid-prompt.md"), "utf8");
+  const spec = lf(await readFile(path.join(ROOT, "docs", "humanoid-prompt.md"), "utf8"));
   return HUMAN_FRONTMATTER + HUMAN_AGENT_NOTES + spec;
 }
 

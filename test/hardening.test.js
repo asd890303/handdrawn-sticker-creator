@@ -7,7 +7,8 @@ import { renderSvg, SpecError, validateHuman, validateSpec } from "../src/index.
 
 const base = { version: 1, name: "t", canvas: { w: 64, h: 64 } };
 const spec = (shapes, extra = {}) => ({ ...base, shapes, ...extra });
-const read = (f) => readFile(new URL(`../${f}`, import.meta.url), "utf8");
+// 一律轉成 LF, 在 Windows (CRLF) 與 macOS (LF) 上結果相同
+const read = async (f) => (await readFile(new URL(`../${f}`, import.meta.url), "utf8")).replace(/\r\n/g, "\n");
 
 test("座標與長度有上限, 超長的線不會讓繪圖卡住", () => {
   const huge = spec([{ t: "line", pts: [[0, 0], [2e7, 0]] }]);
@@ -84,7 +85,12 @@ test("人形規格文件的欄位表中英一致, 且涵蓋全部欄位", async 
 
 test("skills/handdrawn-humanoid/SKILL.md 與 docs/humanoid-prompt.md 同步 (不同步請執行 npm run skill)", async () => {
   const { buildHumanSkill, HUMAN_SKILL_PATH } = await import("../scripts/sync-skill.mjs");
-  assert.equal(await readFile(HUMAN_SKILL_PATH, "utf8"), await buildHumanSkill());
+  assert.equal((await readFile(HUMAN_SKILL_PATH, "utf8")).replace(/\r\n/g, "\n"), await buildHumanSkill());
+});
+
+test(".gitattributes 固定使用 LF 換行 (在 Windows 與 macOS 之間切換時檔案不會被改動)", async () => {
+  const attrs = await read(".gitattributes");
+  assert.match(attrs, /^\* text=auto eol=lf$/m);
 });
 
 test("人形頁用到的介面 key 都有翻譯, 且 STORE_KEYS 包含人形的儲存鍵", async () => {
