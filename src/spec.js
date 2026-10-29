@@ -1,5 +1,6 @@
 // JSON 規格驗證。輸入只能是資料, 數值與顏色逐欄檢查, 不執行任何程式碼, 也不會讓字串帶著標籤進 SVG。
 import { GLYPHS } from "./engine/glyphs.js";
+import { expandSpec } from "./shorthand.js";
 
 // coord: 所有座標 / 長度類數字的絕對值上限; 沒有上限的話, 一條超長的線會讓外框插點多到卡死瀏覽器
 export const LIMITS = { shapes: 2000, depth: 6, repeat: 200, pts: 200, text: 32, palette: 64, coord: 10000 };
@@ -29,8 +30,9 @@ const inRange = (x, lo, hi) => isNum(x) && x >= lo && x <= hi;
 const isCoord = (x) => inRange(x, -LIMITS.coord, LIMITS.coord);
 const isObj = (x) => !!x && typeof x === "object" && !Array.isArray(x);
 
-export function validateSpec(spec) {
+export function validateSpec(input) {
   const errs = [];
+  const spec = expandSpec(input, errs);   // 陣列簡寫先展開, 之後只看完整寫法 (簡寫寫錯的錯誤也記在 errs)
   const err = (path, msg) => errs.push(`${path}: ${msg}`);
   if (!spec || typeof spec !== "object" || Array.isArray(spec)) return ["根節點必須是物件"];
   if (spec.version !== 1) err("version", "必須是 1");

@@ -6,9 +6,10 @@
 // 為了讓 AI 的回覆短一點 (回覆越長, 使用者花的 token 越多), 輸入格式有三個省字的做法, 結果和完整寫法完全相同:
 //   1. 腿 / 手臂 / 身體 的 back 可以省略, 沿用 front (頭的 back 沒有臉, 一定要自己寫)
 //   2. 人形裡的預設值: poly 的 box 預設 false、dot 的 sw 預設 0、line 的 amp 預設 0.6
-//   3. 常用圖形可以用陣列簡寫: ["poly", fill, pts, w?]、["ell", fill, cx, cy, rx, ry, w?]、["line", pts, w?, col?]、["dot", fill, x, y, r]
+//   3. 常用圖形可以用陣列簡寫 (和貼紙同一套, 見 shorthand.js)
 import { renderSvg } from "./render.js";
 import { NAME, validateSpec } from "./spec.js";
+import { expandShapes } from "./shorthand.js";
 
 export const VIEWS = ["front", "back", "side"];
 export const PARTS = ["leg", "arm", "torso", "head"];
@@ -30,52 +31,13 @@ export class HumanError extends Error {
 
 // ---------- 省字: 預設值與陣列簡寫 ----------
 const DEFAULTS = { poly: { box: false }, dot: { sw: 0 }, line: { amp: 0.6 } };
-// 簡寫: 陣列第一個元素是種類, 後面依序是欄位值 (req 個必填, 其餘可省略)
-const SHORT = {
-  poly: { args: ["fill", "pts", "w"], req: 2 },
-  ell: { args: ["fill", "cx", "cy", "rx", "ry", "w"], req: 5 },
-  line: { args: ["pts", "w", "col"], req: 1 },
-  dot: { args: ["fill", "x", "y", "r"], req: 4 },
-};
-const SHORT_SIGNATURE = {
-  poly: '["poly", fill, pts, w?]',
-  ell: '["ell", fill, cx, cy, rx, ry, w?]',
-  line: '["line", pts, w?, col?]',
-  dot: '["dot", fill, x, y, r]',
-};
-// 簡寫寫錯時佔位用的合法圖形, 讓後面圖形的索引不位移 (錯誤已經另外記下)
-const PLACEHOLDER = { t: "dot", x: 0, y: 0, r: 1, fill: "none" };
-
 const isObj = (x) => !!x && typeof x === "object" && !Array.isArray(x);
-
-// 把一個圖形整理成完整寫法: 展開簡寫、補上人形預設值; 群組與重複的 children 也一併處理
-function normalizeShape(shape, path, errs) {
-  let s = shape;
-  if (Array.isArray(shape)) {
-    const tag = shape[0];
-    if (typeof tag !== "string" || !Object.hasOwn(SHORT, tag)) {
-      errs.push(`${path}: 簡寫的第一個元素必須是 ${Object.keys(SHORT).join(" / ")}`);
-      return PLACEHOLDER;
-    }
-    const def = SHORT[tag], vals = shape.slice(1);
-    if (vals.length < def.req || vals.length > def.args.length) {
-      errs.push(`${path}: 簡寫格式是 ${SHORT_SIGNATURE[tag]}`);
-      return PLACEHOLDER;
-    }
-    s = { t: tag };
-    def.args.forEach((k, i) => { if (vals[i] !== undefined) s[k] = vals[i]; });
-  }
-  if (!isObj(s)) return s;   // 交給貼紙驗證回報
-  const out = typeof s.t === "string" && Object.hasOwn(DEFAULTS, s.t) ? { ...DEFAULTS[s.t], ...s } : { ...s };
-  if (Array.isArray(out.children)) out.children = out.children.map((c, i) => normalizeShape(c, `${path}.children[${i}]`, errs));
-  return out;
-}
 
 // 驗證一組圖形 (貼紙規格的驗證), 錯誤路徑從 shapes[...] 改寫成 parts.<部位>.<視角>[...]; 回傳整理後的圖形
 function checkShapes(path, shapes, palette, errs, missing) {
   if (shapes === undefined) { errs.push(`${path}: ${missing}`); return undefined; }
   if (!Array.isArray(shapes) || !shapes.length) { errs.push(`${path}: 需為至少一個圖形的陣列`); return undefined; }
-  const list = shapes.map((s, i) => normalizeShape(s, `${path}[${i}]`, errs));
+  const list = expandShapes(shapes, path, errs, DEFAULTS);
   const probe = { version: 1, name: "probe", canvas: { w: SHEET.cell, h: SHEET.cell }, palette, shapes: list };
   for (const e of validateSpec(probe)) if (e.startsWith("shapes")) errs.push(path + e.slice("shapes".length));
   return list;
